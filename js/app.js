@@ -306,7 +306,7 @@ function jobCard(job) {
       el("h3", {}, [`${job.product}`]),
       el("span", { class: "meta" }, [formatDate(job.date)]),
     ]),
-    el("p", { class: "meta" }, [`${job.supplier} firmasından alınıp ${job.customer} kişisine satıldı`]),
+    el("p", { class: "meta" }, [`${job.supplier} → ${job.customer}`]),
     el("div", { class: "formula" }, [
       `${formatMoney(job.price)} − ${formatMoney(job.cost)} = ${formatMoney(jobProfit(job))}`,
     ]),
