@@ -159,6 +159,45 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
   padding: 8px 18px 18px;
 }
 
+.sheet-wrap { margin: 12px -18px 0; overflow-x: auto; }
+
+.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sheet th,
+.sheet td {
+  border: 1px solid #d0d5dd;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  background: white;
+}
+
+.sheet th {
+  background: #eef1f4;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sheet th.num,
+.sheet td.num { text-align: right; white-space: nowrap; }
+
+.sheet tbody tr:nth-child(even) td { background: #f8f9fb; }
+
+.sheet tfoot td {
+  background: #eef1f4;
+  font-weight: 600;
+}
+
+.sheet .ops { white-space: nowrap; text-align: right; }
+.sheet .ops .text-btn { margin-left: 10px; }
+.muted-cell { color: var(--muted); }
+.meta.wait { color: var(--amber); }
+
 .entry {
   padding: 8px 0 14px;
   border-bottom: 1px solid var(--line);

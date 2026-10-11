@@ -212,7 +212,7 @@ function overview(summary) {
   const items = stories(summary);
   return el("section", {}, [
     items.length
-      ? items.map((item) => (item.kind === "job" ? jobCard(item.job) : expenseCard(item.expense)))
+      ? ledgerTable(items)
       : sampleStory(),
     dangerZone(),
   ]);
@@ -221,9 +221,91 @@ function overview(summary) {
 function sampleStory() {
   const sample = exampleJob(todayISO());
   return el("div", {}, [
-    el("p", { class: "hint" }, ["Boş defter. Örnek şöyle okunur:"]),
-    jobCard(sample, { sample: true }),
+    el("p", { class: "hint" }, ["Boş defter. Örnek satır şöyle durur:"]),
+    ledgerTable([{ kind: "job", date: sample.date, createdAt: sample.createdAt, job: sample }], { sample: true }),
     el("button", { class: "btn primary", type: "button", "data-action": "example" }, ["Bu örneği deftere yaz"]),
+  ]);
+}
+
+function ledgerTable(items, options = {}) {
+  const geldi = sumColumn(items, "in");
+  const gitti = sumColumn(items, "out");
+  const kaldi = sumColumn(items, "left");
+  return el("div", { class: "sheet-wrap" }, [
+    el("table", { class: "sheet" }, [
+      el("thead", {}, [
+        el("tr", {}, ["Tarih", "Ne oldu", "Kimden geldi", "Ne kadar geldi", "Nere gitti", "Ne kadar gitti", "Ne kadar kaldı", ""].map((label, index) =>
+          el("th", { class: index === 3 || index === 5 || index === 6 ? "num" : "" }, [label]),
+        )),
+      ]),
+      el("tbody", {}, items.map((item) => (item.kind === "job" ? jobRow(item.job, options.sample) : expenseRow(item.expense)))),
+      options.sample ? null : el("tfoot", {}, [
+        el("tr", {}, [
+          el("td", { colspan: "3" }, ["Toplam"]),
+          el("td", { class: "num" }, [formatMoney(geldi)]),
+          el("td", {}, []),
+          el("td", { class: "num" }, [formatMoney(gitti)]),
+          el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
+          el("td", {}, []),
+        ]),
+      ]),
+    ]),
+  ]);
+}
+
+function sumColumn(items, key) {
+  const cents = items.reduce((total, item) => total + Math.round(figures(item)[key] * 100), 0);
+  return cents / 100;
+}
+
+function figures(item) {
+  if (item.kind === "job") {
+    return { in: item.job.price, out: item.job.cost, left: jobProfit(item.job) };
+  }
+  return { in: 0, out: item.expense.amount, left: -item.expense.amount };
+}
+
+function jobRow(job, sample) {
+  const profit = jobProfit(job);
+  return el("tr", {}, [
+    el("td", {}, [formatDate(job.date)]),
+    el("td", {}, [
+      el("div", {}, [job.product]),
+      job.note ? el("div", { class: "meta" }, [job.note]) : null,
+    ]),
+    el("td", {}, [job.customer]),
+    moneyCell(job.price, job.collected ? "positive" : "wait", job.collected ? "Geldi" : "Henüz gelmedi"),
+    el("td", {}, [job.supplier]),
+    moneyCell(job.cost, job.costPaid ? "negative" : "wait", job.costPaid ? "Gitti" : "Henüz gitmedi"),
+    moneyCell(profit, profit < 0 ? "negative" : "positive"),
+    sample ? el("td", {}, []) : el("td", { class: "ops" }, [
+      el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
+      el("button", { class: "text-btn danger", type: "button", "data-action": "delete-job", "data-id": job.id }, ["Sil"]),
+    ]),
+  ]);
+}
+
+function expenseRow(expense) {
+  const what = [categoryLabel(expense.category), expense.person, expense.note].filter(Boolean).join(" · ");
+  return el("tr", {}, [
+    el("td", {}, [formatDate(expense.date)]),
+    el("td", {}, [what]),
+    el("td", { class: "muted-cell" }, ["—"]),
+    el("td", { class: "num muted-cell" }, ["—"]),
+    el("td", {}, [categoryLabel(expense.category)]),
+    moneyCell(expense.amount, "negative", "Gitti"),
+    moneyCell(-expense.amount, "negative"),
+    el("td", { class: "ops" }, [
+      el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
+      el("button", { class: "text-btn danger", type: "button", "data-action": "delete-expense", "data-id": expense.id }, ["Sil"]),
+    ]),
+  ]);
+}
+
+function moneyCell(amount, tone, status) {
+  return el("td", { class: "num" }, [
+    el("div", { class: tone || "" }, [formatMoney(amount)]),
+    status ? el("div", { class: tone === "wait" ? "meta wait" : "meta" }, [status]) : null,
   ]);
 }
 
@@ -232,7 +314,7 @@ function jobSection(summary) {
   return el("section", {}, [
     jobForm(editing),
     summary.jobs.length
-      ? summary.jobs.map(jobCard)
+      ? ledgerTable(summary.jobs.map((job) => ({ kind: "job", date: job.date, createdAt: job.createdAt, job })))
       : el("p", { class: "empty" }, ["Bu dönemde iş yok."]),
   ]);
 }
@@ -298,62 +380,12 @@ function moneyPreview(cost, price) {
   return formatMoney(parsedPrice - parsedCost);
 }
 
-function jobCard(job, options = {}) {
-  const profit = jobProfit(job);
-  return el("article", { class: options.sample ? "entry sample" : "entry" }, [
-    el("div", { class: "head" }, [
-      el("div", {}, [
-        el("h3", {}, [job.product]),
-        el("p", { class: "meta" }, [options.sample ? "Örnek" : formatDate(job.date)]),
-      ]),
-      el("div", { class: profit < 0 ? "sum negative" : "sum positive" }, [formatMoney(profit)]),
-    ]),
-    fact("Ne oldu", job.note || job.product),
-    fact(
-      "Kimden geldi",
-      job.customer,
-      job.collected ? "Para geldi" : "Henüz gelmedi",
-      formatMoney(job.price),
-      job.collected ? "positive" : "wait",
-    ),
-    fact(
-      "Nere gitti",
-      job.supplier,
-      job.costPaid ? "Para gitti" : "Henüz gitmedi",
-      formatMoney(job.cost),
-      job.costPaid ? "negative" : "wait",
-    ),
-    fact("Ne kadar oldu", `${formatMoney(profit)} kaldı`),
-    options.sample ? null : el("div", { class: "actions" }, [
-      el("button", { class: "text-btn", type: "button", "data-action": "toggle-collected", "data-id": job.id }, [
-        job.collected ? "Gelmedi" : "Geldi",
-      ]),
-      el("button", { class: "text-btn", type: "button", "data-action": "toggle-paid", "data-id": job.id }, [
-        job.costPaid ? "Gitmedi" : "Gitti",
-      ]),
-      el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
-      el("button", { class: "text-btn danger", type: "button", "data-action": "delete-job", "data-id": job.id }, ["Sil"]),
-    ]),
-  ]);
-}
-
-function fact(ask, who, status, amount, tone) {
-  return el("div", { class: "fact" }, [
-    el("div", { class: "ask" }, [ask]),
-    el("div", {}, [
-      el("div", { class: "who" }, [who]),
-      status ? el("div", { class: tone === "wait" ? "status wait" : "status" }, [status]) : null,
-    ]),
-    amount ? el("div", { class: `sum ${tone || ""}` }, [amount]) : el("div"),
-  ]);
-}
-
 function expenseSection(summary) {
   const editing = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
   return el("section", {}, [
     expenseForm(editing),
     summary.expenses.length
-      ? summary.expenses.map(expenseCard)
+      ? ledgerTable(summary.expenses.map((expense) => ({ kind: "expense", date: expense.date, createdAt: expense.createdAt, expense })))
       : el("p", { class: "empty" }, ["Bu dönemde giden para yok."]),
   ]);
 }
@@ -379,27 +411,6 @@ function expenseForm(expense) {
     el("div", { class: "actions" }, [
       el("button", { class: "btn primary", type: "submit" }, [expense ? "Güncelle" : "Deftere yaz"]),
       expense ? el("button", { class: "btn", type: "button", "data-action": "cancel-expense" }, ["Vazgeç"]) : null,
-    ]),
-  ]);
-}
-
-function expenseCard(expense) {
-  const who = [categoryLabel(expense.category), expense.person].filter(Boolean).join(" · ");
-  return el("article", { class: "entry" }, [
-    el("div", { class: "head" }, [
-      el("div", {}, [
-        el("h3", {}, [who]),
-        el("p", { class: "meta" }, [formatDate(expense.date)]),
-      ]),
-      el("div", { class: "sum negative" }, [formatMoney(expense.amount)]),
-    ]),
-    fact("Ne oldu", [expense.person, expense.note].filter(Boolean).join(" · ") || who),
-    fact("Kimden geldi", "Kimseden gelmedi", "Kasada olan para gitti"),
-    fact("Nere gitti", categoryLabel(expense.category), "Kasadan gitti", formatMoney(expense.amount), "negative"),
-    fact("Ne kadar oldu", `${formatMoney(expense.amount)} gitti`),
-    el("div", { class: "actions" }, [
-      el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
-      el("button", { class: "text-btn danger", type: "button", "data-action": "delete-expense", "data-id": expense.id }, ["Sil"]),
     ]),
   ]);
 }
