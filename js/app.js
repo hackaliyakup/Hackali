@@ -1,6 +1,5 @@
 import {
   CATEGORIES,
-  cashMovements,
   categoryLabel,
   emptyState,
   exampleJob,
@@ -84,12 +83,6 @@ function textInput(name, value, extra = {}) {
   return el("input", { name, value: value ?? "", ...extra });
 }
 
-function signedMoney(value, direction) {
-  const formatted = formatMoney(Math.abs(value));
-  if (direction === "in") return `+${formatted}`;
-  return `−${formatted}`;
-}
-
 function currentSummary() {
   return summarize(state, ui.range, new Date());
 }
@@ -102,12 +95,9 @@ function render() {
 
 function header() {
   return el("header", { class: "top" }, [
-    el("div", { class: "brand" }, [
-      el("div", { class: "mark", "aria-hidden": "true" }, ["₺"]),
-      el("div", {}, [
-        el("h1", {}, ["Hackali Kasa"]),
-        el("p", { class: "sub" }, ["Alış, satış, kâr ve kasa aynı defterde"]),
-      ]),
+    el("div", {}, [
+      el("h1", {}, ["Hackali Kasa"]),
+      el("p", { class: "sub" }, ["Ne oldu, kimden geldi, nereye gitti, ne kadar kaldı."]),
     ]),
     el("div", { class: "toolbar" }, [
       el("select", { "data-action": "range", "aria-label": "Dönem" }, [
@@ -115,8 +105,8 @@ function header() {
         option("year", "Bu yıl", ui.range),
         option("all", "Tümü", ui.range),
       ]),
-      el("button", { class: "btn", type: "button", "data-action": "export" }, ["Dışa aktar"]),
-      el("button", { class: "btn", type: "button", "data-action": "import" }, ["İçe aktar"]),
+      el("button", { class: "btn", type: "button", "data-action": "export" }, ["Yedek al"]),
+      el("button", { class: "btn", type: "button", "data-action": "import" }, ["Yedek yükle"]),
     ]),
   ]);
 }
@@ -126,24 +116,21 @@ function option(value, label, current) {
 }
 
 function hero(summary) {
+  const opening = state.openingCash
+    ? `Kasa ${formatMoney(state.openingCash)} ile açıldı. `
+    : "";
   return el("section", { class: "hero" }, [
-    el("div", {}, [
-      el("div", { class: "eyebrow" }, ["Kasa kalan"]),
-      el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
-      el("p", { class: "hint" }, [
-        "Açılış ",
-        formatMoney(state.openingCash),
-        " + tahsil edilen satışlar − ödenen alışlar − giderler. Bu bakiye tüm kayıtların bakiyesidir.",
-      ]),
+    el("div", { class: "eyebrow" }, ["Kasada"]),
+    el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
+    el("p", { class: "hint" }, [
+      opening,
+      "Gelen paradan giden para çıkınca kasada bu kalır. Bu sayı bütün kayıtların toplamıdır.",
     ]),
-    el("div", {}, [
-      ui.editingOpening
-        ? openingForm()
-        : el("button", { class: "btn", type: "button", "data-action": "edit-opening" }, ["Açılış kasasını düzenle"]),
-      el("p", { class: "hint" }, [
-        "Kâr, satış fiyatından alış fiyatını düşünce kalır. Kasa ise paranın gerçekten girip çıktığı yerdir. Veresiye satış kâra yazılır, kasaya ancak tahsil edilince girer.",
-      ]),
-    ]),
+    ui.editingOpening
+      ? openingForm()
+      : el("button", { class: "text-btn", type: "button", "data-action": "edit-opening" }, [
+          `Başlangıç parası: ${formatMoney(state.openingCash)}`,
+        ]),
   ]);
 }
 
@@ -159,27 +146,30 @@ function openingForm() {
 
 function stats(summary) {
   const cards = [
-    ["Kasa giren", summary.cashIn, "in"],
-    ["Kasa çıkan", summary.cashOut, "out"],
-    ["Brüt kâr", summary.grossProfit, summary.grossProfit < 0 ? "out" : "in"],
-    ["Net kâr", summary.netProfit, summary.netProfit < 0 ? "out" : "in"],
-    ["Gider", summary.expenseTotal, "out"],
-    ["Bekleyen tahsilat", summary.receivable, "warn"],
-    ["Ödenmemiş alış", summary.payable, "warn"],
+    ["Gelen", "Kimden geldi", summary.cashIn, summary.cashIn ? "positive" : ""],
+    ["Giden", "Nere gitti", summary.cashOut, summary.cashOut ? "negative" : ""],
+    ["Kâr", "Ne kadar kaldı", summary.netProfit, summary.netProfit ? (summary.netProfit < 0 ? "negative" : "positive") : ""],
   ];
-  return el("section", { class: "stats" }, cards.map(([label, value, tone]) =>
-    el("article", { class: `stat ${tone}` }, [
-      el("span", {}, [label]),
-      el("b", {}, [formatMoney(value)]),
-    ]),
-  ));
+  const waiting = [];
+  if (summary.receivable) waiting.push(`Henüz gelmedi: ${formatMoney(summary.receivable)}`);
+  if (summary.payable) waiting.push(`Henüz gitmedi: ${formatMoney(summary.payable)}`);
+  return el("section", {}, [
+    el("div", { class: "facts" }, cards.map(([label, hint, value, tone]) =>
+      el("article", { class: "stat" }, [
+        el("span", { class: "ask" }, [label]),
+        el("b", { class: tone }, [formatMoney(value)]),
+        el("span", { class: "meta" }, [hint]),
+      ]),
+    )),
+    waiting.length ? el("p", { class: "hint" }, [waiting.join("  ·  ")]) : null,
+  ]);
 }
 
 function tabs() {
   const items = [
-    ["ozet", "Özet"],
-    ["isler", "İşler"],
-    ["giderler", "Giderler"],
+    ["ozet", "Defter"],
+    ["isler", "Yeni iş"],
+    ["giderler", "Gider"],
   ];
   return el("nav", { class: "tabs", "aria-label": "Bölümler" }, items.map(([id, label]) =>
     el("button", {
@@ -205,50 +195,45 @@ function alerts(summary) {
   if (ui.error) nodes.push(el("div", { class: "notice error-notice" }, [ui.error]));
   if (summary.hiddenReceivableCount || summary.hiddenPayableCount) {
     nodes.push(el("div", { class: "notice" }, [
-      "Seçili dönemin dışında bekleyen tahsilat veya ödenmemiş alış var. Hepsini görmek için dönemi Tümü yap.",
+      "Başka ayda henüz gelmemiş veya gitmemiş para var. Hepsini görmek için dönemi Tümü yap.",
     ]));
   }
   return nodes;
 }
 
+function stories(summary) {
+  return [
+    ...summary.jobs.map((job) => ({ kind: "job", date: job.date, createdAt: job.createdAt, job })),
+    ...summary.expenses.map((expense) => ({ kind: "expense", date: expense.date, createdAt: expense.createdAt, expense })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
 function overview(summary) {
-  const moves = cashMovements(state, ui.range, new Date());
+  const items = stories(summary);
   return el("section", {}, [
-    el("h2", {}, ["Kasa hareketleri"]),
-    el("p", { class: "hint" }, ["Kasaya giren tahsilatlar, kasadan çıkan alış ödemeleri ve yemek gibi giderler."]),
-    state.jobs.length === 0
-      ? el("div", { class: "notice" }, [
-          el("p", {}, ["Örnek: A firmasından 15.000 ₺’ye alınan ürün, B’ye 25.000 ₺’ye takılır. Kâr 10.000 ₺ olur ve bu para kasada kalır."]),
-          el("button", { class: "btn primary", type: "button", "data-action": "example", style: "margin-top:10px" }, ["Bu örneği kasaya işle"]),
-        ])
-      : null,
-    moves.length
-      ? el("div", { class: "list" }, moves.map(movementRow))
-      : el("p", { class: "empty" }, ["Bu dönemde kasa hareketi yok."]),
+    items.length
+      ? items.map((item) => (item.kind === "job" ? jobCard(item.job) : expenseCard(item.expense)))
+      : sampleStory(),
     dangerZone(),
   ]);
 }
 
-function movementRow(move) {
-  const sign = move.kind === "in" ? "positive" : "negative";
-  return el("article", { class: "move" }, [
-    el("span", { class: "meta" }, [formatDate(move.date)]),
-    el("div", {}, [
-      el("strong", {}, [move.title]),
-      el("div", { class: "meta" }, [move.detail]),
-    ]),
-    el("span", { class: `amount ${sign}` }, [signedMoney(move.amount, move.kind === "in" ? "in" : "out")]),
+function sampleStory() {
+  const sample = exampleJob(todayISO());
+  return el("div", {}, [
+    el("p", { class: "hint" }, ["Boş defter. Örnek şöyle okunur:"]),
+    jobCard(sample, { sample: true }),
+    el("button", { class: "btn primary", type: "button", "data-action": "example" }, ["Bu örneği deftere yaz"]),
   ]);
 }
 
 function jobSection(summary) {
   const editing = state.jobs.find((job) => job.id === ui.editingJobId);
   return el("section", {}, [
-    el("h2", {}, [editing ? "İşi düzenle" : "Yeni iş"]),
     jobForm(editing),
-    el("div", { class: "list" }, summary.jobs.length
+    summary.jobs.length
       ? summary.jobs.map(jobCard)
-      : [el("p", { class: "empty" }, ["Bu dönemde iş yok."])]),
+      : el("p", { class: "empty" }, ["Bu dönemde iş yok."]),
   ]);
 }
 
@@ -265,29 +250,42 @@ function jobForm(job) {
     collected: true,
   };
   return el("form", { id: "job-form" }, [
-    el("div", { class: "grid" }, [
-      field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
-      field("product", "Ürün", textInput("product", value.product, { required: "true", maxlength: "120", placeholder: "Örneğin klima" })),
-      field("supplier", "Kimden alındı", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
-      field("cost", "Alış fiyatı", textInput("cost", value.cost === "" ? "" : String(value.cost), { inputmode: "decimal", required: "true", placeholder: "15.000" })),
-      field("customer", "Kime takıldı / satıldı", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
-      field("price", "Satış fiyatı", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "25.000" })),
-      el("label", { class: "check" }, [
-        el("input", { type: "checkbox", name: "costPaid", checked: value.costPaid ? "true" : false }),
-        "Alış parasını ödedim",
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Ne oldu"]),
+      el("div", { class: "grid" }, [
+        field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
+        field("product", "İş", textInput("product", value.product, { required: "true", maxlength: "120", placeholder: "Klima takıldı" })),
+        field("note", "Kısa not", textInput("note", value.note || "", { maxlength: "400", placeholder: "İstersen boş bırak" }), "wide"),
       ]),
-      el("label", { class: "check" }, [
-        el("input", { type: "checkbox", name: "collected", checked: value.collected ? "true" : false }),
-        "Satış parası kasaya girdi",
+    ]),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Nere gitti"]),
+      el("div", { class: "grid" }, [
+        field("supplier", "Kime gitti", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
+        field("cost", "Ne kadar gitti", textInput("cost", value.cost === "" ? "" : String(value.cost), { inputmode: "decimal", required: "true", placeholder: "15.000" })),
+        el("label", { class: "check" }, [
+          el("input", { type: "checkbox", name: "costPaid", checked: value.costPaid ? "true" : false }),
+          "Para gitti",
+        ]),
       ]),
-      field("note", "Not", el("textarea", { name: "note", maxlength: "400" }, [value.note || ""]), "wide"),
+    ]),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Kimden geldi"]),
+      el("div", { class: "grid" }, [
+        field("customer", "Kimden geldi", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
+        field("price", "Ne kadar geldi", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "25.000" })),
+        el("label", { class: "check" }, [
+          el("input", { type: "checkbox", name: "collected", checked: value.collected ? "true" : false }),
+          "Para geldi",
+        ]),
+      ]),
     ]),
     el("div", { class: "preview" }, [
-      el("span", {}, ["Bu işin kârı"]),
+      el("span", {}, ["Ne kadar kaldı"]),
       el("strong", { id: "profit-preview" }, [moneyPreview(value.cost, value.price)]),
     ]),
     el("div", { class: "actions" }, [
-      el("button", { class: "btn primary", type: "submit" }, [job ? "İşi güncelle" : "İşi kaydet"]),
+      el("button", { class: "btn primary", type: "submit" }, [job ? "Güncelle" : "Deftere yaz"]),
       job ? el("button", { class: "btn", type: "button", "data-action": "cancel-job" }, ["Vazgeç"]) : null,
     ]),
   ]);
@@ -300,27 +298,38 @@ function moneyPreview(cost, price) {
   return formatMoney(parsedPrice - parsedCost);
 }
 
-function jobCard(job) {
-  return el("article", { class: "card" }, [
-    el("div", { class: "row" }, [
-      el("h3", {}, [`${job.product}`]),
-      el("span", { class: "meta" }, [formatDate(job.date)]),
+function jobCard(job, options = {}) {
+  const profit = jobProfit(job);
+  return el("article", { class: options.sample ? "entry sample" : "entry" }, [
+    el("div", { class: "head" }, [
+      el("div", {}, [
+        el("h3", {}, [job.product]),
+        el("p", { class: "meta" }, [options.sample ? "Örnek" : formatDate(job.date)]),
+      ]),
+      el("div", { class: profit < 0 ? "sum negative" : "sum positive" }, [formatMoney(profit)]),
     ]),
-    el("p", { class: "meta" }, [`${job.supplier} → ${job.customer}`]),
-    el("div", { class: "formula" }, [
-      `${formatMoney(job.price)} − ${formatMoney(job.cost)} = ${formatMoney(jobProfit(job))}`,
-    ]),
-    el("div", { class: "status-row" }, [
-      el("span", { class: job.collected ? "pill good" : "pill" }, [job.collected ? "Kasaya girdi" : "Tahsil bekliyor"]),
-      el("span", { class: job.costPaid ? "pill bad" : "pill" }, [job.costPaid ? "Alış kasadan çıktı" : "Alış henüz ödenmedi"]),
-    ]),
-    job.note ? el("p", { class: "meta" }, [job.note]) : null,
-    el("div", { class: "actions" }, [
+    fact("Ne oldu", job.note || job.product),
+    fact(
+      "Kimden geldi",
+      job.customer,
+      job.collected ? "Para geldi" : "Henüz gelmedi",
+      formatMoney(job.price),
+      job.collected ? "positive" : "wait",
+    ),
+    fact(
+      "Nere gitti",
+      job.supplier,
+      job.costPaid ? "Para gitti" : "Henüz gitmedi",
+      formatMoney(job.cost),
+      job.costPaid ? "negative" : "wait",
+    ),
+    fact("Ne kadar oldu", `${formatMoney(profit)} kaldı`),
+    options.sample ? null : el("div", { class: "actions" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "toggle-collected", "data-id": job.id }, [
-        job.collected ? "Tahsilatı geri al" : "Tahsil edildi",
+        job.collected ? "Gelmedi" : "Geldi",
       ]),
       el("button", { class: "text-btn", type: "button", "data-action": "toggle-paid", "data-id": job.id }, [
-        job.costPaid ? "Ödemeyi geri al" : "Alış ödendi",
+        job.costPaid ? "Gitmedi" : "Gitti",
       ]),
       el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
       el("button", { class: "text-btn danger", type: "button", "data-action": "delete-job", "data-id": job.id }, ["Sil"]),
@@ -328,45 +337,66 @@ function jobCard(job) {
   ]);
 }
 
+function fact(ask, who, status, amount, tone) {
+  return el("div", { class: "fact" }, [
+    el("div", { class: "ask" }, [ask]),
+    el("div", {}, [
+      el("div", { class: "who" }, [who]),
+      status ? el("div", { class: tone === "wait" ? "status wait" : "status" }, [status]) : null,
+    ]),
+    amount ? el("div", { class: `sum ${tone || ""}` }, [amount]) : el("div"),
+  ]);
+}
+
 function expenseSection(summary) {
   const editing = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
   return el("section", {}, [
-    el("h2", {}, [editing ? "Gideri düzenle" : "Yeni gider"]),
-    el("p", { class: "hint" }, ["Eleman yemek yediğinde ya da gider olacak bir ürün alındığında buraya yaz. Tutar kasadan ve net kârdan düşer."]),
     expenseForm(editing),
-    el("div", { class: "list" }, summary.expenses.length
+    summary.expenses.length
       ? summary.expenses.map(expenseCard)
-      : [el("p", { class: "empty" }, ["Bu dönemde gider yok."])]),
+      : el("p", { class: "empty" }, ["Bu dönemde giden para yok."]),
   ]);
 }
 
 function expenseForm(expense) {
   const value = expense || { date: todayISO(), category: "yemek", person: "", amount: "", note: "" };
   return el("form", { id: "expense-form" }, [
-    el("div", { class: "grid" }, [
-      field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
-      field("category", "Tür", el("select", { name: "category" }, CATEGORIES.map((item) =>
-        option(item.id, item.label, value.category),
-      ))),
-      field("person", "Kim", textInput("person", value.person, { maxlength: "120", placeholder: "Eleman adı" })),
-      field("amount", "Tutar", textInput("amount", value.amount === "" ? "" : String(value.amount), { inputmode: "decimal", required: "true", placeholder: "250" })),
-      field("note", "Ne oldu", el("textarea", { name: "note", maxlength: "400" }, [value.note || ""])),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Ne oldu"]),
+      el("div", { class: "grid" }, [
+        field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
+        field("category", "Tür", el("select", { name: "category" }, CATEGORIES.map((item) =>
+          option(item.id, item.label, value.category),
+        ))),
+        field("person", "Kim", textInput("person", value.person, { maxlength: "120", placeholder: "Ali" })),
+        field("note", "Kısa not", textInput("note", value.note || "", { maxlength: "400", placeholder: "Öğle yemeği" })),
+      ]),
+    ]),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Nere gitti"]),
+      field("amount", "Ne kadar gitti", textInput("amount", value.amount === "" ? "" : String(value.amount), { inputmode: "decimal", required: "true", placeholder: "350" })),
     ]),
     el("div", { class: "actions" }, [
-      el("button", { class: "btn primary", type: "submit" }, [expense ? "Gideri güncelle" : "Gideri kaydet"]),
+      el("button", { class: "btn primary", type: "submit" }, [expense ? "Güncelle" : "Deftere yaz"]),
       expense ? el("button", { class: "btn", type: "button", "data-action": "cancel-expense" }, ["Vazgeç"]) : null,
     ]),
   ]);
 }
 
 function expenseCard(expense) {
-  const who = expense.person ? `${expense.person} · ` : "";
-  return el("article", { class: "card" }, [
-    el("div", { class: "row" }, [
-      el("h3", {}, [`${categoryLabel(expense.category)}`]),
-      el("span", { class: "amount negative" }, [signedMoney(expense.amount, "out")]),
+  const who = [categoryLabel(expense.category), expense.person].filter(Boolean).join(" · ");
+  return el("article", { class: "entry" }, [
+    el("div", { class: "head" }, [
+      el("div", {}, [
+        el("h3", {}, [who]),
+        el("p", { class: "meta" }, [formatDate(expense.date)]),
+      ]),
+      el("div", { class: "sum negative" }, [formatMoney(expense.amount)]),
     ]),
-    el("p", { class: "meta" }, [`${formatDate(expense.date)} · ${who}${expense.note || "Gider"}`]),
+    fact("Ne oldu", [expense.person, expense.note].filter(Boolean).join(" · ") || who),
+    fact("Kimden geldi", "Kimseden gelmedi", "Kasada olan para gitti"),
+    fact("Nere gitti", categoryLabel(expense.category), "Kasadan gitti", formatMoney(expense.amount), "negative"),
+    fact("Ne kadar oldu", `${formatMoney(expense.amount)} gitti`),
     el("div", { class: "actions" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
       el("button", { class: "text-btn danger", type: "button", "data-action": "delete-expense", "data-id": expense.id }, ["Sil"]),
@@ -375,6 +405,7 @@ function expenseCard(expense) {
 }
 
 function dangerZone() {
+  if (!state.jobs.length && !state.expenses.length) return null;
   return el("div", { class: "footer-actions" }, [
     el("button", { class: "text-btn danger", type: "button", "data-action": "reset" }, ["Tüm kayıtları sil"]),
   ]);
@@ -393,10 +424,10 @@ function readJob(form) {
   const cost = parseMoney(data.get("cost"));
   const price = parseMoney(data.get("price"));
   if (!data.get("product") || !data.get("supplier") || !data.get("customer")) {
-    return { error: "Ürün, alınan yer ve satılan kişi gerekli." };
+    return { error: "Ne oldu, para nereye gitti ve kimden geldi yazılmalı." };
   }
   if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(price) || price < 0) {
-    return { error: "Alış ve satış fiyatını sayı olarak yaz. Örnek: 15.000" };
+    return { error: "Ne kadar geldiğini ve ne kadar gittiğini sayı yaz. Örnek: 15.000" };
   }
   const existing = state.jobs.find((job) => job.id === ui.editingJobId);
   return {
@@ -419,7 +450,7 @@ function readJob(form) {
 function readExpense(form) {
   const data = new FormData(form);
   const amount = parseMoney(data.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) return { error: "Gider tutarını yaz. Örnek: 250" };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Ne kadar gittiğini yaz. Örnek: 350" };
   const existing = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
   return {
     expense: {
@@ -465,7 +496,7 @@ function importLedger() {
       ui.error = "";
       render();
     } catch {
-      ui.error = "Bu dosya bir kasa defteri değil.";
+      ui.error = "Bu dosya bir yedek değil.";
       ui.tab = "ozet";
       render();
     }
@@ -551,7 +582,7 @@ function onClick(event) {
   }
   if (action === "example") {
     state = { ...state, jobs: upsert(state.jobs, exampleJob(todayISO())) };
-    ui.message = "Örnek işlendi: alış 15.000 ₺, satış 25.000 ₺, kâr ve kasada kalan 10.000 ₺.";
+    ui.message = "Yazıldı. B'den 25.000 ₺ geldi. A Firmasına 15.000 ₺ gitti. 10.000 ₺ kaldı.";
     saveState();
     render();
   }

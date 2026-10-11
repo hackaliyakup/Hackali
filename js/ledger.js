@@ -236,7 +236,7 @@ export function exampleJob(date) {
     price: 25000,
     costPaid: true,
     collected: true,
-    note: "A firmasından alınıp B'ye takıldı.",
+    note: "",
     createdAt: `${date}T00:00:00.000Z`,
   };
 }

@@ -4,7 +4,7 @@ Küçük bir alış-satış defteri. Ürünü kimden kaça aldığını, kime ka
 
 Giriş: [Hackali Kasa](https://htmlpreview.github.io/?https://github.com/hackaliyakup/Hackali/blob/cursor/kasa-defteri-3edd/kasa.html)
 
-Aynı sayfa `kasa.html` dosyası. İndirip çift tıklayınca da Chrome veya Edge ile açılır. Kayıtlar o tarayıcıda kalır. Yedek için **Dışa aktar** ile JSON indir.
+Aynı sayfa `kasa.html` dosyası. İndirip çift tıklayınca da Chrome veya Edge ile açılır. Kayıtlar o tarayıcıda kalır. Yedek için **Yedek al** ile JSON indir.
 
 Geliştirme kopyasını sunmak için:
 
