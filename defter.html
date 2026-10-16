@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Hackali Kasa</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2314171c'/%3E%3Cpath d='M8 12h16M8 16h10M8 20h13' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Cpath d='M8 12h16M8 16h10M8 20h13' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
 :root {
   --bg: #f3f4f6;
@@ -40,17 +40,24 @@ button { cursor: pointer; }
   width: 100%;
   min-height: 100vh;
   margin: 0;
-  padding: 16px 16px 48px;
-  background: #fff;
+  padding: 0 16px 48px;
+  background: #f4f6f8;
 }
 
-.top {
+.topbar {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  align-items: flex-end;
-  margin-bottom: 28px;
+  align-items: center;
+  margin: 0 -16px 18px;
+  padding: 16px 24px;
+  background: #0b1220;
+  color: white;
 }
+
+.topbar .sub { color: #98a2b3; }
+.topbar .btn { background: transparent; color: white; border-color: rgba(255,255,255,.22); }
+.topbar select { width: auto; background: #1d2939; color: white; border-color: #344054; }
 
 h1, h2, h3, p { margin: 0; }
 
@@ -86,7 +93,27 @@ label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; min-width: 0
 
 label span, .ask, .hint, .meta, .status { color: var(--muted); }
 
-.hero { margin-bottom: 8px; }
+.board {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) 2fr;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.kasa-card {
+  background: linear-gradient(155deg, #101828 0%, #1d2939 55%, #0f3d2e 140%);
+  color: white;
+  border-radius: 16px;
+  padding: 22px 24px 18px;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+.kasa-card .eyebrow,
+.kasa-card .hint { color: rgba(255,255,255,.72); }
+
+.kasa-card .balance { color: white; font-size: 52px; font-weight: 600; }
+.kasa-card .balance.negative { color: #fda29b; }
+.kasa-card .text-btn { color: #d0d5dd; }
 
 .eyebrow {
   color: var(--muted);
@@ -108,17 +135,24 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
 
 .facts {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin: 18px 0 8px;
+  margin: 0;
 }
 
 .stat {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-top: 3px solid #101828;
+  border-radius: 14px;
   padding: 14px 16px;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, .04);
 }
+
+.stat.in { border-top-color: #067647; }
+.stat.out { border-top-color: #b42318; }
+.stat.profit { border-top-color: #0e9384; }
+.stat.wait { border-top-color: #b54708; }
 
 .stat b {
   display: block;
@@ -127,6 +161,8 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
   font-weight: 500;
   letter-spacing: -0.03em;
 }
+
+.stat .meta { display: block; margin-top: 2px; }
 
 .tabs {
   display: inline-flex;
@@ -187,10 +223,24 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
   background: white;
 }
 
+.sheet-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding: 14px 18px 0;
+}
+
+.sheet-bar strong { font-size: 15px; }
+.sheet-bar span { color: var(--muted); font-size: 13px; }
+
 .sheet th {
-  background: #eef1f4;
-  font-size: 13px;
+  background: #101828;
+  color: white;
+  border-color: #1d2939;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: .02em;
   white-space: nowrap;
 }
 
@@ -199,10 +249,30 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
 
 .sheet tbody tr:nth-child(even) td { background: #f8f9fb; }
 
+.sheet tbody tr:hover td { background: #f4f7fb; }
+
 .sheet tfoot td {
-  background: #eef1f4;
-  font-weight: 600;
+  background: #f2f4f7;
+  font-weight: 700;
+  border-top: 2px solid #101828;
 }
+
+.badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.badge.good { background: #e7f6ee; color: #067647; }
+.badge.wait { background: #fff4e5; color: #b54708; }
+.badge.bad { background: #fdecea; color: #b42318; }
+.badge.kind { background: #eef2ff; color: #3538cd; margin-right: 6px; margin-top: 0; }
+
+.cell-title { font-weight: 600; }
 
 .sheet .ops { white-space: nowrap; text-align: right; }
 .sheet .ops .text-btn { margin-left: 10px; }
@@ -300,11 +370,11 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
 
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-@media (max-width: 720px) {
-  .balance { font-size: 40px; }
-  .facts, .grid, .block, .fact { grid-template-columns: 1fr; }
-  .top { flex-direction: column; align-items: stretch; }
-  .sum { text-align: left; }
+@media (max-width: 900px) {
+  .board, .facts { grid-template-columns: 1fr; }
+  .kasa-card .balance { font-size: 40px; }
+  .topbar { flex-direction: column; align-items: stretch; }
+  .grid, .block { grid-template-columns: 1fr; }
   .block h3 { padding-top: 0; }
 }
 
@@ -635,11 +705,11 @@ function currentSummary() {
 function render() {
   const root = document.querySelector("#app");
   const summary = currentSummary();
-  root.replaceChildren(header(), hero(summary), stats(summary), tabs(), panel(summary));
+  root.replaceChildren(header(), board(summary), tabs(), panel(summary));
 }
 
 function header() {
-  return el("header", { class: "top" }, [
+  return el("header", { class: "topbar" }, [
     el("div", {}, [
       el("h1", {}, ["Hackali Kasa"]),
       el("p", { class: "sub" }, ["Ne oldu, kimden geldi, nereye gitti, ne kadar kaldı."]),
@@ -660,22 +730,38 @@ function option(value, label, current) {
   return el("option", { value, selected: value === current }, [label]);
 }
 
-function hero(summary) {
+function board(summary) {
   const opening = state.openingCash
     ? `Kasa ${formatMoney(state.openingCash)} ile açıldı. `
     : "";
-  return el("section", { class: "hero" }, [
-    el("div", { class: "eyebrow" }, ["Kasada"]),
-    el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
-    el("p", { class: "hint" }, [
-      opening,
-      "Gelen paradan giden para çıkınca kasada bu kalır. Bu sayı bütün kayıtların toplamıdır.",
+  const sales = summary.jobs.reduce((total, job) => total + Math.round(job.price * 100), 0) / 100;
+  const margin = sales ? Math.round((summary.grossProfit / sales) * 100) : 0;
+  const collected = summary.jobs.filter((job) => job.collected).length;
+  const cards = [
+    ["Gelen", formatMoney(summary.cashIn), "Kimden geldi", `${collected} tahsilat işlendi`, "in", "positive"],
+    ["Giden", formatMoney(summary.cashOut), "Nere gitti", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
+    ["Kâr", formatMoney(summary.netProfit), "Ne kadar kaldı", sales ? `Satışın %${margin}'ı kâr` : "Bu dönemde satış yok", "profit", summary.netProfit < 0 ? "negative" : "positive"],
+    ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Gelmedi ${formatMoney(summary.receivable)} · Gitmedi ${formatMoney(summary.payable)}`, "wait", ""],
+  ];
+  return el("section", { class: "board" }, [
+    el("article", { class: "kasa-card" }, [
+      el("div", { class: "eyebrow" }, ["Kasada"]),
+      el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
+      el("p", { class: "hint" }, [opening, "Gelen paradan giden para çıkınca kasada bu kalır."]),
+      ui.editingOpening
+        ? openingForm()
+        : el("button", { class: "text-btn", type: "button", "data-action": "edit-opening" }, [
+            `Başlangıç parası: ${formatMoney(state.openingCash)}`,
+          ]),
     ]),
-    ui.editingOpening
-      ? openingForm()
-      : el("button", { class: "text-btn", type: "button", "data-action": "edit-opening" }, [
-          `Başlangıç parası: ${formatMoney(state.openingCash)}`,
-        ]),
+    el("div", { class: "facts" }, cards.map(([label, value, hint, detail, kind, tone]) =>
+      el("article", { class: `stat ${kind}` }, [
+        el("span", { class: "ask" }, [label]),
+        el("b", { class: tone }, [value]),
+        el("span", { class: "meta" }, [hint]),
+        el("span", { class: "meta" }, [detail]),
+      ]),
+    )),
   ]);
 }
 
@@ -686,27 +772,6 @@ function openingForm() {
       el("button", { class: "btn primary", type: "submit" }, ["Kaydet"]),
       el("button", { class: "btn", type: "button", "data-action": "cancel-opening" }, ["Vazgeç"]),
     ]),
-  ]);
-}
-
-function stats(summary) {
-  const cards = [
-    ["Gelen", "Kimden geldi", summary.cashIn, summary.cashIn ? "positive" : ""],
-    ["Giden", "Nere gitti", summary.cashOut, summary.cashOut ? "negative" : ""],
-    ["Kâr", "Ne kadar kaldı", summary.netProfit, summary.netProfit ? (summary.netProfit < 0 ? "negative" : "positive") : ""],
-  ];
-  const waiting = [];
-  if (summary.receivable) waiting.push(`Henüz gelmedi: ${formatMoney(summary.receivable)}`);
-  if (summary.payable) waiting.push(`Henüz gitmedi: ${formatMoney(summary.payable)}`);
-  return el("section", {}, [
-    el("div", { class: "facts" }, cards.map(([label, hint, value, tone]) =>
-      el("article", { class: "stat" }, [
-        el("span", { class: "ask" }, [label]),
-        el("b", { class: tone }, [formatMoney(value)]),
-        el("span", { class: "meta" }, [hint]),
-      ]),
-    )),
-    waiting.length ? el("p", { class: "hint" }, [waiting.join("  ·  ")]) : null,
   ]);
 }
 
@@ -776,22 +841,33 @@ function ledgerTable(items, options = {}) {
   const geldi = sumColumn(items, "in");
   const gitti = sumColumn(items, "out");
   const kaldi = sumColumn(items, "left");
-  return el("div", { class: "sheet-wrap" }, [
-    el("table", { class: "sheet" }, [
-      el("thead", {}, [
-        el("tr", {}, ["Tarih", "Ne oldu", "Kimden geldi", "Ne kadar geldi", "Nere gitti", "Ne kadar gitti", "Ne kadar kaldı", ""].map((label, index) =>
-          el("th", { class: index === 3 || index === 5 || index === 6 ? "num" : "" }, [label]),
-        )),
-      ]),
-      el("tbody", {}, items.map((item) => (item.kind === "job" ? jobRow(item.job, options.sample) : expenseRow(item.expense)))),
-      options.sample ? null : el("tfoot", {}, [
-        el("tr", {}, [
-          el("td", { colspan: "3" }, ["Toplam"]),
-          el("td", { class: "num" }, [formatMoney(geldi)]),
-          el("td", {}, []),
-          el("td", { class: "num" }, [formatMoney(gitti)]),
-          el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
-          el("td", {}, []),
+  const jobs = items.filter((item) => item.kind === "job").length;
+  const expenses = items.length - jobs;
+  const headers = ["#", "Tarih", "Ne oldu", "Kimden geldi", "Ne kadar geldi", "Nere gitti", "Ne kadar gitti", "Ne kadar kaldı", ""];
+  return el("div", {}, [
+    el("div", { class: "sheet-bar" }, [
+      el("strong", {}, ["Defter"]),
+      el("span", {}, [`${items.length} satır · ${jobs} iş · ${expenses} gider`]),
+    ]),
+    el("div", { class: "sheet-wrap" }, [
+      el("table", { class: "sheet" }, [
+        el("thead", {}, [
+          el("tr", {}, headers.map((label, index) =>
+            el("th", { class: index === 4 || index === 6 || index === 7 ? "num" : "" }, [label]),
+          )),
+        ]),
+        el("tbody", {}, items.map((item, index) => (
+          item.kind === "job" ? jobRow(item.job, options.sample, index + 1) : expenseRow(item.expense, index + 1)
+        ))),
+        options.sample ? null : el("tfoot", {}, [
+          el("tr", {}, [
+            el("td", { colspan: "4" }, ["Toplam"]),
+            el("td", { class: "num" }, [formatMoney(geldi)]),
+            el("td", {}, []),
+            el("td", { class: "num" }, [formatMoney(gitti)]),
+            el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
+            el("td", {}, []),
+          ]),
         ]),
       ]),
     ]),
@@ -810,19 +886,35 @@ function figures(item) {
   return { in: 0, out: item.expense.amount, left: -item.expense.amount };
 }
 
-function jobRow(job, sample) {
+function rate(part, whole) {
+  if (!whole) return "";
+  return `%${Math.round((part / whole) * 100)}`;
+}
+
+function badge(text, kind) {
+  return el("span", { class: `badge ${kind}` }, [text]);
+}
+
+function jobRow(job, sample, index) {
   const profit = jobProfit(job);
   return el("tr", {}, [
+    el("td", { class: "muted-cell" }, [String(index)]),
     el("td", {}, [formatDate(job.date)]),
     el("td", {}, [
-      el("div", {}, [job.product]),
+      el("div", {}, [badge("İş", "kind"), el("span", { class: "cell-title" }, [job.product])]),
       job.note ? el("div", { class: "meta" }, [job.note]) : null,
     ]),
-    el("td", {}, [job.customer]),
-    moneyCell(job.price, job.collected ? "positive" : "wait", job.collected ? "Geldi" : "Henüz gelmedi"),
-    el("td", {}, [job.supplier]),
-    moneyCell(job.cost, job.costPaid ? "negative" : "wait", job.costPaid ? "Gitti" : "Henüz gitmedi"),
-    moneyCell(profit, profit < 0 ? "negative" : "positive"),
+    el("td", {}, [
+      el("div", { class: "cell-title" }, [job.customer]),
+      badge(job.collected ? "Geldi" : "Henüz gelmedi", job.collected ? "good" : "wait"),
+    ]),
+    moneyCell(job.price, job.collected ? "positive" : "wait"),
+    el("td", {}, [
+      el("div", { class: "cell-title" }, [job.supplier]),
+      badge(job.costPaid ? "Gitti" : "Henüz gitmedi", job.costPaid ? "bad" : "wait"),
+    ]),
+    moneyCell(job.cost, job.costPaid ? "negative" : "wait"),
+    moneyCell(profit, profit < 0 ? "negative" : "positive", rate(profit, job.price)),
     sample ? el("td", {}, []) : el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
       el("button", { class: "text-btn danger", type: "button", "data-action": "delete-job", "data-id": job.id }, ["Sil"]),
@@ -830,15 +922,22 @@ function jobRow(job, sample) {
   ]);
 }
 
-function expenseRow(expense) {
-  const what = [categoryLabel(expense.category), expense.person, expense.note].filter(Boolean).join(" · ");
+function expenseRow(expense, index) {
+  const what = [expense.person, expense.note].filter(Boolean).join(" · ");
   return el("tr", {}, [
+    el("td", { class: "muted-cell" }, [String(index)]),
     el("td", {}, [formatDate(expense.date)]),
-    el("td", {}, [what]),
+    el("td", {}, [
+      el("div", {}, [badge("Gider", "kind"), el("span", { class: "cell-title" }, [categoryLabel(expense.category)])]),
+      what ? el("div", { class: "meta" }, [what]) : null,
+    ]),
     el("td", { class: "muted-cell" }, ["—"]),
     el("td", { class: "num muted-cell" }, ["—"]),
-    el("td", {}, [categoryLabel(expense.category)]),
-    moneyCell(expense.amount, "negative", "Gitti"),
+    el("td", {}, [
+      el("div", { class: "cell-title" }, [categoryLabel(expense.category)]),
+      badge("Gitti", "bad"),
+    ]),
+    moneyCell(expense.amount, "negative"),
     moneyCell(-expense.amount, "negative"),
     el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
@@ -847,10 +946,10 @@ function expenseRow(expense) {
   ]);
 }
 
-function moneyCell(amount, tone, status) {
+function moneyCell(amount, tone, extra) {
   return el("td", { class: "num" }, [
     el("div", { class: tone || "" }, [formatMoney(amount)]),
-    status ? el("div", { class: tone === "wait" ? "meta wait" : "meta" }, [status]) : null,
+    extra ? el("div", { class: "meta" }, [extra]) : null,
   ]);
 }
 

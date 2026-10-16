@@ -90,11 +90,11 @@ function currentSummary() {
 function render() {
   const root = document.querySelector("#app");
   const summary = currentSummary();
-  root.replaceChildren(header(), hero(summary), stats(summary), tabs(), panel(summary));
+  root.replaceChildren(header(), board(summary), tabs(), panel(summary));
 }
 
 function header() {
-  return el("header", { class: "top" }, [
+  return el("header", { class: "topbar" }, [
     el("div", {}, [
       el("h1", {}, ["Hackali Kasa"]),
       el("p", { class: "sub" }, ["Ne oldu, kimden geldi, nereye gitti, ne kadar kaldı."]),
@@ -115,22 +115,38 @@ function option(value, label, current) {
   return el("option", { value, selected: value === current }, [label]);
 }
 
-function hero(summary) {
+function board(summary) {
   const opening = state.openingCash
     ? `Kasa ${formatMoney(state.openingCash)} ile açıldı. `
     : "";
-  return el("section", { class: "hero" }, [
-    el("div", { class: "eyebrow" }, ["Kasada"]),
-    el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
-    el("p", { class: "hint" }, [
-      opening,
-      "Gelen paradan giden para çıkınca kasada bu kalır. Bu sayı bütün kayıtların toplamıdır.",
+  const sales = summary.jobs.reduce((total, job) => total + Math.round(job.price * 100), 0) / 100;
+  const margin = sales ? Math.round((summary.grossProfit / sales) * 100) : 0;
+  const collected = summary.jobs.filter((job) => job.collected).length;
+  const cards = [
+    ["Gelen", formatMoney(summary.cashIn), "Kimden geldi", `${collected} tahsilat işlendi`, "in", "positive"],
+    ["Giden", formatMoney(summary.cashOut), "Nere gitti", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
+    ["Kâr", formatMoney(summary.netProfit), "Ne kadar kaldı", sales ? `Satışın %${margin}'ı kâr` : "Bu dönemde satış yok", "profit", summary.netProfit < 0 ? "negative" : "positive"],
+    ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Gelmedi ${formatMoney(summary.receivable)} · Gitmedi ${formatMoney(summary.payable)}`, "wait", ""],
+  ];
+  return el("section", { class: "board" }, [
+    el("article", { class: "kasa-card" }, [
+      el("div", { class: "eyebrow" }, ["Kasada"]),
+      el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
+      el("p", { class: "hint" }, [opening, "Gelen paradan giden para çıkınca kasada bu kalır."]),
+      ui.editingOpening
+        ? openingForm()
+        : el("button", { class: "text-btn", type: "button", "data-action": "edit-opening" }, [
+            `Başlangıç parası: ${formatMoney(state.openingCash)}`,
+          ]),
     ]),
-    ui.editingOpening
-      ? openingForm()
-      : el("button", { class: "text-btn", type: "button", "data-action": "edit-opening" }, [
-          `Başlangıç parası: ${formatMoney(state.openingCash)}`,
-        ]),
+    el("div", { class: "facts" }, cards.map(([label, value, hint, detail, kind, tone]) =>
+      el("article", { class: `stat ${kind}` }, [
+        el("span", { class: "ask" }, [label]),
+        el("b", { class: tone }, [value]),
+        el("span", { class: "meta" }, [hint]),
+        el("span", { class: "meta" }, [detail]),
+      ]),
+    )),
   ]);
 }
 
@@ -141,27 +157,6 @@ function openingForm() {
       el("button", { class: "btn primary", type: "submit" }, ["Kaydet"]),
       el("button", { class: "btn", type: "button", "data-action": "cancel-opening" }, ["Vazgeç"]),
     ]),
-  ]);
-}
-
-function stats(summary) {
-  const cards = [
-    ["Gelen", "Kimden geldi", summary.cashIn, summary.cashIn ? "positive" : ""],
-    ["Giden", "Nere gitti", summary.cashOut, summary.cashOut ? "negative" : ""],
-    ["Kâr", "Ne kadar kaldı", summary.netProfit, summary.netProfit ? (summary.netProfit < 0 ? "negative" : "positive") : ""],
-  ];
-  const waiting = [];
-  if (summary.receivable) waiting.push(`Henüz gelmedi: ${formatMoney(summary.receivable)}`);
-  if (summary.payable) waiting.push(`Henüz gitmedi: ${formatMoney(summary.payable)}`);
-  return el("section", {}, [
-    el("div", { class: "facts" }, cards.map(([label, hint, value, tone]) =>
-      el("article", { class: "stat" }, [
-        el("span", { class: "ask" }, [label]),
-        el("b", { class: tone }, [formatMoney(value)]),
-        el("span", { class: "meta" }, [hint]),
-      ]),
-    )),
-    waiting.length ? el("p", { class: "hint" }, [waiting.join("  ·  ")]) : null,
   ]);
 }
 
@@ -231,22 +226,33 @@ function ledgerTable(items, options = {}) {
   const geldi = sumColumn(items, "in");
   const gitti = sumColumn(items, "out");
   const kaldi = sumColumn(items, "left");
-  return el("div", { class: "sheet-wrap" }, [
-    el("table", { class: "sheet" }, [
-      el("thead", {}, [
-        el("tr", {}, ["Tarih", "Ne oldu", "Kimden geldi", "Ne kadar geldi", "Nere gitti", "Ne kadar gitti", "Ne kadar kaldı", ""].map((label, index) =>
-          el("th", { class: index === 3 || index === 5 || index === 6 ? "num" : "" }, [label]),
-        )),
-      ]),
-      el("tbody", {}, items.map((item) => (item.kind === "job" ? jobRow(item.job, options.sample) : expenseRow(item.expense)))),
-      options.sample ? null : el("tfoot", {}, [
-        el("tr", {}, [
-          el("td", { colspan: "3" }, ["Toplam"]),
-          el("td", { class: "num" }, [formatMoney(geldi)]),
-          el("td", {}, []),
-          el("td", { class: "num" }, [formatMoney(gitti)]),
-          el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
-          el("td", {}, []),
+  const jobs = items.filter((item) => item.kind === "job").length;
+  const expenses = items.length - jobs;
+  const headers = ["#", "Tarih", "Ne oldu", "Kimden geldi", "Ne kadar geldi", "Nere gitti", "Ne kadar gitti", "Ne kadar kaldı", ""];
+  return el("div", {}, [
+    el("div", { class: "sheet-bar" }, [
+      el("strong", {}, ["Defter"]),
+      el("span", {}, [`${items.length} satır · ${jobs} iş · ${expenses} gider`]),
+    ]),
+    el("div", { class: "sheet-wrap" }, [
+      el("table", { class: "sheet" }, [
+        el("thead", {}, [
+          el("tr", {}, headers.map((label, index) =>
+            el("th", { class: index === 4 || index === 6 || index === 7 ? "num" : "" }, [label]),
+          )),
+        ]),
+        el("tbody", {}, items.map((item, index) => (
+          item.kind === "job" ? jobRow(item.job, options.sample, index + 1) : expenseRow(item.expense, index + 1)
+        ))),
+        options.sample ? null : el("tfoot", {}, [
+          el("tr", {}, [
+            el("td", { colspan: "4" }, ["Toplam"]),
+            el("td", { class: "num" }, [formatMoney(geldi)]),
+            el("td", {}, []),
+            el("td", { class: "num" }, [formatMoney(gitti)]),
+            el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
+            el("td", {}, []),
+          ]),
         ]),
       ]),
     ]),
@@ -265,19 +271,35 @@ function figures(item) {
   return { in: 0, out: item.expense.amount, left: -item.expense.amount };
 }
 
-function jobRow(job, sample) {
+function rate(part, whole) {
+  if (!whole) return "";
+  return `%${Math.round((part / whole) * 100)}`;
+}
+
+function badge(text, kind) {
+  return el("span", { class: `badge ${kind}` }, [text]);
+}
+
+function jobRow(job, sample, index) {
   const profit = jobProfit(job);
   return el("tr", {}, [
+    el("td", { class: "muted-cell" }, [String(index)]),
     el("td", {}, [formatDate(job.date)]),
     el("td", {}, [
-      el("div", {}, [job.product]),
+      el("div", {}, [badge("İş", "kind"), el("span", { class: "cell-title" }, [job.product])]),
       job.note ? el("div", { class: "meta" }, [job.note]) : null,
     ]),
-    el("td", {}, [job.customer]),
-    moneyCell(job.price, job.collected ? "positive" : "wait", job.collected ? "Geldi" : "Henüz gelmedi"),
-    el("td", {}, [job.supplier]),
-    moneyCell(job.cost, job.costPaid ? "negative" : "wait", job.costPaid ? "Gitti" : "Henüz gitmedi"),
-    moneyCell(profit, profit < 0 ? "negative" : "positive"),
+    el("td", {}, [
+      el("div", { class: "cell-title" }, [job.customer]),
+      badge(job.collected ? "Geldi" : "Henüz gelmedi", job.collected ? "good" : "wait"),
+    ]),
+    moneyCell(job.price, job.collected ? "positive" : "wait"),
+    el("td", {}, [
+      el("div", { class: "cell-title" }, [job.supplier]),
+      badge(job.costPaid ? "Gitti" : "Henüz gitmedi", job.costPaid ? "bad" : "wait"),
+    ]),
+    moneyCell(job.cost, job.costPaid ? "negative" : "wait"),
+    moneyCell(profit, profit < 0 ? "negative" : "positive", rate(profit, job.price)),
     sample ? el("td", {}, []) : el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
       el("button", { class: "text-btn danger", type: "button", "data-action": "delete-job", "data-id": job.id }, ["Sil"]),
@@ -285,15 +307,22 @@ function jobRow(job, sample) {
   ]);
 }
 
-function expenseRow(expense) {
-  const what = [categoryLabel(expense.category), expense.person, expense.note].filter(Boolean).join(" · ");
+function expenseRow(expense, index) {
+  const what = [expense.person, expense.note].filter(Boolean).join(" · ");
   return el("tr", {}, [
+    el("td", { class: "muted-cell" }, [String(index)]),
     el("td", {}, [formatDate(expense.date)]),
-    el("td", {}, [what]),
+    el("td", {}, [
+      el("div", {}, [badge("Gider", "kind"), el("span", { class: "cell-title" }, [categoryLabel(expense.category)])]),
+      what ? el("div", { class: "meta" }, [what]) : null,
+    ]),
     el("td", { class: "muted-cell" }, ["—"]),
     el("td", { class: "num muted-cell" }, ["—"]),
-    el("td", {}, [categoryLabel(expense.category)]),
-    moneyCell(expense.amount, "negative", "Gitti"),
+    el("td", {}, [
+      el("div", { class: "cell-title" }, [categoryLabel(expense.category)]),
+      badge("Gitti", "bad"),
+    ]),
+    moneyCell(expense.amount, "negative"),
     moneyCell(-expense.amount, "negative"),
     el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
@@ -302,10 +331,10 @@ function expenseRow(expense) {
   ]);
 }
 
-function moneyCell(amount, tone, status) {
+function moneyCell(amount, tone, extra) {
   return el("td", { class: "num" }, [
     el("div", { class: tone || "" }, [formatMoney(amount)]),
-    status ? el("div", { class: tone === "wait" ? "meta wait" : "meta" }, [status]) : null,
+    extra ? el("div", { class: "meta" }, [extra]) : null,
   ]);
 }
 
