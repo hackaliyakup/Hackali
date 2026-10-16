@@ -102,7 +102,10 @@ function currentSummary() {
 function render() {
   const root = document.querySelector("#app");
   const summary = currentSummary();
-  root.replaceChildren(header(), board(summary), tabs(), panel(summary));
+  const parts = [header(), tabs()];
+  if (ui.tab === "ozet") parts.push(board(summary));
+  parts.push(panel(summary));
+  root.replaceChildren(...parts);
 }
 
 function header() {
@@ -341,14 +344,9 @@ function moneyCell(amount, tone, extra) {
   ]);
 }
 
-function jobSection(summary) {
+function jobSection() {
   const editing = state.jobs.find((job) => job.id === ui.editingJobId);
-  return el("section", {}, [
-    jobForm(editing),
-    summary.jobs.length
-      ? ledgerTable(summary.jobs.map((job) => ({ kind: "job", date: job.date, createdAt: job.createdAt, job })))
-      : el("p", { class: "empty" }, ["Bu dönemde iş yok."]),
-  ]);
+  return el("section", {}, [jobForm(editing)]);
 }
 
 function jobForm(job) {
@@ -412,14 +410,9 @@ function moneyPreview(cost, price) {
   return formatMoney(parsedPrice - parsedCost);
 }
 
-function expenseSection(summary) {
+function expenseSection() {
   const editing = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
-  return el("section", {}, [
-    expenseForm(editing),
-    summary.expenses.length
-      ? ledgerTable(summary.expenses.map((expense) => ({ kind: "expense", date: expense.date, createdAt: expense.createdAt, expense })))
-      : el("p", { class: "empty" }, ["Bu dönemde giden para yok."]),
-  ]);
+  return el("section", {}, [expenseForm(editing)]);
 }
 
 function expenseForm(expense) {
@@ -578,6 +571,7 @@ function onSubmit(event) {
     if (!inRange(saved.date, ui.range, new Date())) ui.range = "all";
     state = { ...state, jobs: upsert(state.jobs, saved) };
     ui.editingJobId = null;
+    ui.tab = "ozet";
     ui.error = "";
     ui.message = "";
     saveState();
@@ -598,6 +592,7 @@ function onSubmit(event) {
     if (!inRange(saved.date, ui.range, new Date())) ui.range = "all";
     state = { ...state, expenses: upsert(state.expenses, saved) };
     ui.editingExpenseId = null;
+    ui.tab = "ozet";
     ui.error = "";
     saveState();
     render();
@@ -639,6 +634,7 @@ function onClick(event) {
   }
   if (action === "cancel-job") {
     ui.editingJobId = null;
+    ui.tab = "ozet";
     render();
   }
   if (action === "delete-job" && confirm("Bu iş silinsin mi?")) {
@@ -662,6 +658,7 @@ function onClick(event) {
   }
   if (action === "cancel-expense") {
     ui.editingExpenseId = null;
+    ui.tab = "ozet";
     render();
   }
   if (action === "delete-expense" && confirm("Bu gider silinsin mi?")) {
