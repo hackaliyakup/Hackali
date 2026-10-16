@@ -97,7 +97,7 @@ function header() {
   return el("header", { class: "topbar" }, [
     el("div", {}, [
       el("h1", {}, ["Hackali Kasa"]),
-      el("p", { class: "sub" }, ["Ne oldu, kimden geldi, nereye gitti, ne kadar kaldı."]),
+      el("p", { class: "sub" }, ["Yapılan iş, kimden alındı, kime verildi, ne kadar kaldı."]),
     ]),
     el("div", { class: "toolbar" }, [
       el("select", { "data-action": "range", "aria-label": "Dönem" }, [
@@ -123,8 +123,8 @@ function board(summary) {
   const margin = sales ? Math.round((summary.grossProfit / sales) * 100) : 0;
   const collected = summary.jobs.filter((job) => job.collected).length;
   const cards = [
-    ["Gelen", formatMoney(summary.cashIn), "Kimden geldi", `${collected} tahsilat işlendi`, "in", "positive"],
-    ["Giden", formatMoney(summary.cashOut), "Nere gitti", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
+    ["Gelen", formatMoney(summary.cashIn), "Kimden alındı", `${collected} tahsilat işlendi`, "in", "positive"],
+    ["Giden", formatMoney(summary.cashOut), "Kime verildi", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
     ["Kâr", formatMoney(summary.netProfit), "Ne kadar kaldı", sales ? `Satışın %${margin}'ı kâr` : "Bu dönemde satış yok", "profit", summary.netProfit < 0 ? "negative" : "positive"],
     ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Gelmedi ${formatMoney(summary.receivable)} · Gitmedi ${formatMoney(summary.payable)}`, "wait", ""],
   ];
@@ -228,7 +228,7 @@ function ledgerTable(items, options = {}) {
   const kaldi = sumColumn(items, "left");
   const jobs = items.filter((item) => item.kind === "job").length;
   const expenses = items.length - jobs;
-  const headers = ["#", "Tarih", "Ne oldu", "Kimden geldi", "Ne kadar geldi", "Nere gitti", "Ne kadar gitti", "Ne kadar kaldı", ""];
+  const headers = ["#", "Tarih", "Yapılan iş", "Kimden alındı", "Ne kadar geldi", "Kime verildi", "Ne kadar gitti", "Ne kadar kaldı", ""];
   return el("div", {}, [
     el("div", { class: "sheet-bar" }, [
       el("strong", {}, ["Defter"]),
@@ -362,17 +362,17 @@ function jobForm(job) {
   };
   return el("form", { id: "job-form" }, [
     el("div", { class: "block" }, [
-      el("h3", {}, ["Ne oldu"]),
+      el("h3", {}, ["Yapılan iş"]),
       el("div", { class: "grid" }, [
         field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
-        field("product", "İş", textInput("product", value.product, { required: "true", maxlength: "120", placeholder: "Klima takıldı" })),
+        field("product", "Yapılan iş", textInput("product", value.product, { required: "true", maxlength: "120", placeholder: "Klima takıldı" })),
         field("note", "Kısa not", textInput("note", value.note || "", { maxlength: "400", placeholder: "İstersen boş bırak" }), "wide"),
       ]),
     ]),
     el("div", { class: "block" }, [
-      el("h3", {}, ["Nere gitti"]),
+      el("h3", {}, ["Kime verildi"]),
       el("div", { class: "grid" }, [
-        field("supplier", "Kime gitti", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
+        field("supplier", "Kime verildi", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
         field("cost", "Ne kadar gitti", textInput("cost", value.cost === "" ? "" : String(value.cost), { inputmode: "decimal", required: "true", placeholder: "15.000" })),
         el("label", { class: "check" }, [
           el("input", { type: "checkbox", name: "costPaid", checked: value.costPaid ? "true" : false }),
@@ -381,9 +381,9 @@ function jobForm(job) {
       ]),
     ]),
     el("div", { class: "block" }, [
-      el("h3", {}, ["Kimden geldi"]),
+      el("h3", {}, ["Kimden alındı"]),
       el("div", { class: "grid" }, [
-        field("customer", "Kimden geldi", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
+        field("customer", "Kimden alındı", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
         field("price", "Ne kadar geldi", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "25.000" })),
         el("label", { class: "check" }, [
           el("input", { type: "checkbox", name: "collected", checked: value.collected ? "true" : false }),
@@ -423,7 +423,7 @@ function expenseForm(expense) {
   const value = expense || { date: todayISO(), category: "yemek", person: "", amount: "", note: "" };
   return el("form", { id: "expense-form" }, [
     el("div", { class: "block" }, [
-      el("h3", {}, ["Ne oldu"]),
+      el("h3", {}, ["Yapılan iş"]),
       el("div", { class: "grid" }, [
         field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
         field("category", "Tür", el("select", { name: "category" }, CATEGORIES.map((item) =>
@@ -434,7 +434,7 @@ function expenseForm(expense) {
       ]),
     ]),
     el("div", { class: "block" }, [
-      el("h3", {}, ["Nere gitti"]),
+      el("h3", {}, ["Kime verildi"]),
       field("amount", "Ne kadar gitti", textInput("amount", value.amount === "" ? "" : String(value.amount), { inputmode: "decimal", required: "true", placeholder: "350" })),
     ]),
     el("div", { class: "actions" }, [
@@ -464,7 +464,7 @@ function readJob(form) {
   const cost = parseMoney(data.get("cost"));
   const price = parseMoney(data.get("price"));
   if (!data.get("product") || !data.get("supplier") || !data.get("customer")) {
-    return { error: "Ne oldu, para nereye gitti ve kimden geldi yazılmalı." };
+    return { error: "Yapılan iş, kime verildi ve kimden alındı yazılmalı." };
   }
   if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(price) || price < 0) {
     return { error: "Ne kadar geldiğini ve ne kadar gittiğini sayı yaz. Örnek: 15.000" };
