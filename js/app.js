@@ -7,6 +7,7 @@ import {
   formatMoney,
   inRange,
   jobProfit,
+  correctPurchaseSale,
   normalize,
   parseMoney,
   summarize,
@@ -24,19 +25,30 @@ const ui = {
   error: "",
 };
 
-let state = loadState();
+const SWAP_FLAG = "hackali-kasa-alis-satis-v1";
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return emptyState();
+  if (!raw) {
+    localStorage.setItem(SWAP_FLAG, "1");
+    return emptyState();
+  }
+  let data;
   try {
-    return normalize(JSON.parse(raw));
+    data = normalize(JSON.parse(raw));
   } catch {
     localStorage.setItem(`${STORAGE_KEY}-bozuk`, raw);
     ui.message = "Kayıtlı defter okunamadı. Bozuk kayıt yedeklendi ve yeni bir defter açıldı.";
     return emptyState();
   }
+  if (localStorage.getItem(SWAP_FLAG)) return data;
+  const fixed = correctPurchaseSale(data);
+  localStorage.setItem(SWAP_FLAG, "1");
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(fixed));
+  return fixed;
 }
+
+let state = loadState();
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -123,10 +135,10 @@ function board(summary) {
   const margin = sales ? Math.round((summary.grossProfit / sales) * 100) : 0;
   const collected = summary.jobs.filter((job) => job.collected).length;
   const cards = [
-    ["Gelen", formatMoney(summary.cashIn), "Kimden alındı", `${collected} tahsilat işlendi`, "in", "positive"],
-    ["Giden", formatMoney(summary.cashOut), "Kime verildi", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
+    ["Gelen", formatMoney(summary.cashIn), "Satış", `${collected} tahsilat işlendi`, "in", "positive"],
+    ["Giden", formatMoney(summary.cashOut), "Alış ve gider", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
     ["Kâr", formatMoney(summary.netProfit), "Ne kadar kaldı", sales ? `Satışın %${margin}'ı kâr` : "Bu dönemde satış yok", "profit", summary.netProfit < 0 ? "negative" : "positive"],
-    ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Gelmedi ${formatMoney(summary.receivable)} · Gitmedi ${formatMoney(summary.payable)}`, "wait", ""],
+    ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Alınacak ${formatMoney(summary.receivable)} · Ödenecek ${formatMoney(summary.payable)}`, "wait", ""],
   ];
   return el("section", { class: "board" }, [
     el("article", { class: "kasa-card" }, [
@@ -223,12 +235,12 @@ function sampleStory() {
 }
 
 function ledgerTable(items, options = {}) {
-  const geldi = sumColumn(items, "in");
-  const gitti = sumColumn(items, "out");
+  const alis = sumColumn(items, "alis");
+  const satis = sumColumn(items, "satis");
   const kaldi = sumColumn(items, "left");
   const jobs = items.filter((item) => item.kind === "job").length;
   const expenses = items.length - jobs;
-  const headers = ["#", "Tarih", "Yapılan iş", "Kimden alındı", "Ne kadar geldi", "Kime verildi", "Ne kadar gitti", "Ne kadar kaldı", ""];
+  const headers = ["#", "Tarih", "Yapılan iş", "Kimden alındı", "Alış", "Kime verildi", "Satış", "Ne kadar kaldı", ""];
   return el("div", {}, [
     el("div", { class: "sheet-bar" }, [
       el("strong", {}, ["Defter"]),
@@ -247,9 +259,9 @@ function ledgerTable(items, options = {}) {
         options.sample ? null : el("tfoot", {}, [
           el("tr", {}, [
             el("td", { colspan: "4" }, ["Toplam"]),
-            el("td", { class: "num" }, [formatMoney(geldi)]),
+            el("td", { class: "num" }, [formatMoney(alis)]),
             el("td", {}, []),
-            el("td", { class: "num" }, [formatMoney(gitti)]),
+            el("td", { class: "num" }, [formatMoney(satis)]),
             el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
             el("td", {}, []),
           ]),
@@ -266,9 +278,9 @@ function sumColumn(items, key) {
 
 function figures(item) {
   if (item.kind === "job") {
-    return { in: item.job.price, out: item.job.cost, left: jobProfit(item.job) };
+    return { alis: item.job.cost, satis: item.job.price, left: jobProfit(item.job) };
   }
-  return { in: 0, out: item.expense.amount, left: -item.expense.amount };
+  return { alis: 0, satis: 0, left: -item.expense.amount };
 }
 
 function rate(part, whole) {
@@ -289,16 +301,10 @@ function jobRow(job, sample, index) {
       el("div", {}, [badge("İş", "kind"), el("span", { class: "cell-title" }, [job.product])]),
       job.note ? el("div", { class: "meta" }, [job.note]) : null,
     ]),
-    el("td", {}, [
-      el("div", { class: "cell-title" }, [job.customer]),
-      badge(job.collected ? "Geldi" : "Henüz gelmedi", job.collected ? "good" : "wait"),
-    ]),
-    moneyCell(job.price, job.collected ? "positive" : "wait"),
-    el("td", {}, [
-      el("div", { class: "cell-title" }, [job.supplier]),
-      badge(job.costPaid ? "Gitti" : "Henüz gitmedi", job.costPaid ? "bad" : "wait"),
-    ]),
-    moneyCell(job.cost, job.costPaid ? "negative" : "wait"),
+    el("td", {}, [el("div", { class: "cell-title" }, [job.supplier])]),
+    moneyCell(job.cost, "negative"),
+    el("td", {}, [el("div", { class: "cell-title" }, [job.customer])]),
+    moneyCell(job.price, "positive"),
     moneyCell(profit, profit < 0 ? "negative" : "positive", rate(profit, job.price)),
     sample ? el("td", {}, []) : el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
@@ -318,11 +324,8 @@ function expenseRow(expense, index) {
     ]),
     el("td", { class: "muted-cell" }, ["—"]),
     el("td", { class: "num muted-cell" }, ["—"]),
-    el("td", {}, [
-      el("div", { class: "cell-title" }, [categoryLabel(expense.category)]),
-      badge("Gitti", "bad"),
-    ]),
-    moneyCell(expense.amount, "negative"),
+    el("td", {}, [el("div", { class: "cell-title" }, [categoryLabel(expense.category)])]),
+    el("td", { class: "num muted-cell" }, ["—"]),
     moneyCell(-expense.amount, "negative"),
     el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
@@ -370,24 +373,24 @@ function jobForm(job) {
       ]),
     ]),
     el("div", { class: "block" }, [
-      el("h3", {}, ["Kime verildi"]),
+      el("h3", {}, ["Kimden alındı"]),
       el("div", { class: "grid" }, [
-        field("supplier", "Kime verildi", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
-        field("cost", "Ne kadar gitti", textInput("cost", value.cost === "" ? "" : String(value.cost), { inputmode: "decimal", required: "true", placeholder: "15.000" })),
+        field("supplier", "Kimden alındı", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
+        field("cost", "Alış", textInput("cost", value.cost === "" ? "" : String(value.cost), { inputmode: "decimal", required: "true", placeholder: "1.000" })),
         el("label", { class: "check" }, [
           el("input", { type: "checkbox", name: "costPaid", checked: value.costPaid ? "true" : false }),
-          "Para gitti",
+          "Alış parasını ödedim",
         ]),
       ]),
     ]),
     el("div", { class: "block" }, [
-      el("h3", {}, ["Kimden alındı"]),
+      el("h3", {}, ["Kime verildi"]),
       el("div", { class: "grid" }, [
-        field("customer", "Kimden alındı", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
-        field("price", "Ne kadar geldi", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "25.000" })),
+        field("customer", "Kime verildi", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
+        field("price", "Satış", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "1.500" })),
         el("label", { class: "check" }, [
           el("input", { type: "checkbox", name: "collected", checked: value.collected ? "true" : false }),
-          "Para geldi",
+          "Satış parası geldi",
         ]),
       ]),
     ]),

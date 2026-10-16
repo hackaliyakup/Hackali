@@ -145,6 +145,25 @@ export function jobProfit(job) {
   return roundMoney(job.price - job.cost);
 }
 
+export function correctPurchaseSale(state) {
+  const source = normalize(state);
+  return {
+    ...source,
+    jobs: source.jobs.map((job) => {
+      if (job.cost <= job.price) return job;
+      return {
+        ...job,
+        supplier: job.customer,
+        customer: job.supplier,
+        cost: job.price,
+        price: job.cost,
+        costPaid: job.collected,
+        collected: job.costPaid,
+      };
+    }),
+  };
+}
+
 export function summarize(state, range = "all", now = new Date()) {
   const source = normalize(state);
   const jobs = source.jobs.filter((job) => inRange(job.date, range, now));

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   cashMovements,
+  correctPurchaseSale,
   exampleJob,
   parseMoney,
   summarize,
@@ -104,4 +105,45 @@ test("lists cash coming in, purchase money going out, and expenses", () => {
       ["expense", 80],
     ],
   );
+});
+
+test("reads 1000 alış and 1500 satış as 500 left", () => {
+  const fixed = correctPurchaseSale({
+    openingCash: 0,
+    jobs: [{
+      id: "anten",
+      date: "2026-10-16",
+      product: "anten",
+      supplier: "ÖDF",
+      customer: "traqzbon elektronikk",
+      cost: 1500,
+      price: 1000,
+      costPaid: true,
+      collected: false,
+      note: "",
+      createdAt: "2026-10-16T00:00:00.000Z",
+    }],
+    expenses: [],
+  });
+  const job = fixed.jobs[0];
+  assert.equal(job.supplier, "traqzbon elektronikk");
+  assert.equal(job.customer, "ÖDF");
+  assert.equal(job.cost, 1000);
+  assert.equal(job.price, 1500);
+  assert.equal(job.costPaid, false);
+  assert.equal(job.collected, true);
+  assert.equal(summarize(fixed, "all", new Date(2026, 9, 16)).grossProfit, 500);
+});
+
+test("keeps a normal 15000 alış and 25000 satış row as written", () => {
+  const fixed = correctPurchaseSale({
+    openingCash: 0,
+    jobs: [exampleJob("2026-10-07")],
+    expenses: [],
+  });
+  assert.equal(fixed.jobs[0].supplier, "A Firması");
+  assert.equal(fixed.jobs[0].customer, "B");
+  assert.equal(fixed.jobs[0].cost, 15000);
+  assert.equal(fixed.jobs[0].price, 25000);
+  assert.equal(summarize(fixed, "all", NOW).grossProfit, 10000);
 });
