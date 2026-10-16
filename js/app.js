@@ -7,6 +7,8 @@ import {
   formatMoney,
   inRange,
   jobProfit,
+  dueAmount,
+  receivedAmount,
   correctPurchaseSale,
   normalize,
   parseMoney,
@@ -136,9 +138,9 @@ function board(summary) {
     : "";
   const sales = summary.jobs.reduce((total, job) => total + Math.round(job.price * 100), 0) / 100;
   const margin = sales ? Math.round((summary.grossProfit / sales) * 100) : 0;
-  const collected = summary.jobs.filter((job) => job.collected).length;
+  const collected = summary.jobs.filter((job) => receivedAmount(job) > 0).length;
   const cards = [
-    ["Gelen", formatMoney(summary.cashIn), "Satış", `${collected} tahsilat işlendi`, "in", "positive"],
+    ["Gelen", formatMoney(summary.cashIn), "Kasaya giren", `${collected} tahsilat işlendi`, "in", "positive"],
     ["Giden", formatMoney(summary.cashOut), "Alış ve gider", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
     ["Kâr", formatMoney(summary.netProfit), "Ne kadar kaldı", sales ? `Satışın %${margin}'ı kâr` : "Bu dönemde satış yok", "profit", summary.netProfit < 0 ? "negative" : "positive"],
     ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Alınacak ${formatMoney(summary.receivable)} · Ödenecek ${formatMoney(summary.payable)}`, "wait", ""],
@@ -240,10 +242,13 @@ function sampleStory() {
 function ledgerTable(items, options = {}) {
   const alis = sumColumn(items, "alis");
   const satis = sumColumn(items, "satis");
+  const geldi = sumColumn(items, "geldi");
+  const alinacak = sumColumn(items, "alinacak");
   const kaldi = sumColumn(items, "left");
   const jobs = items.filter((item) => item.kind === "job").length;
   const expenses = items.length - jobs;
-  const headers = ["#", "Tarih", "Yapılan iş", "Kimden alındı", "Alış", "Kime verildi", "Satış", "Ne kadar kaldı", ""];
+  const headers = ["#", "Tarih", "Yapılan iş", "Kimden alındı", "Alış", "Kime verildi", "Satış", "Ne kadar geldi", "Alınacak", "Ne kadar kaldı", ""];
+  const numeric = new Set([4, 6, 7, 8, 9]);
   return el("div", {}, [
     el("div", { class: "sheet-bar" }, [
       el("strong", {}, ["Defter"]),
@@ -253,7 +258,7 @@ function ledgerTable(items, options = {}) {
       el("table", { class: "sheet" }, [
         el("thead", {}, [
           el("tr", {}, headers.map((label, index) =>
-            el("th", { class: index === 4 || index === 6 || index === 7 ? "num" : "" }, [label]),
+            el("th", { class: numeric.has(index) ? "num" : "" }, [label]),
           )),
         ]),
         el("tbody", {}, items.map((item, index) => (
@@ -265,6 +270,8 @@ function ledgerTable(items, options = {}) {
             el("td", { class: "num" }, [formatMoney(alis)]),
             el("td", {}, []),
             el("td", { class: "num" }, [formatMoney(satis)]),
+            el("td", { class: "num" }, [formatMoney(geldi)]),
+            el("td", { class: alinacak > 0 ? "num negative" : "num" }, [formatMoney(alinacak)]),
             el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
             el("td", {}, []),
           ]),
@@ -281,9 +288,15 @@ function sumColumn(items, key) {
 
 function figures(item) {
   if (item.kind === "job") {
-    return { alis: item.job.cost, satis: item.job.price, left: jobProfit(item.job) };
+    return {
+      alis: item.job.cost,
+      satis: item.job.price,
+      geldi: receivedAmount(item.job),
+      alinacak: dueAmount(item.job),
+      left: jobProfit(item.job),
+    };
   }
-  return { alis: 0, satis: 0, left: -item.expense.amount };
+  return { alis: 0, satis: 0, geldi: 0, alinacak: 0, left: -item.expense.amount };
 }
 
 function rate(part, whole) {
@@ -308,6 +321,8 @@ function jobRow(job, sample, index) {
     moneyCell(job.cost, "negative"),
     el("td", {}, [el("div", { class: "cell-title" }, [job.customer])]),
     moneyCell(job.price, "positive"),
+    moneyCell(receivedAmount(job), "positive"),
+    moneyCell(dueAmount(job), dueAmount(job) > 0 ? "negative" : ""),
     moneyCell(profit, profit < 0 ? "negative" : "positive", rate(profit, job.price)),
     sample ? el("td", {}, []) : el("td", { class: "ops" }, [
       el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
@@ -328,6 +343,8 @@ function expenseRow(expense, index) {
     el("td", { class: "muted-cell" }, ["—"]),
     el("td", { class: "num muted-cell" }, ["—"]),
     el("td", {}, [el("div", { class: "cell-title" }, [categoryLabel(expense.category)])]),
+    el("td", { class: "num muted-cell" }, ["—"]),
+    el("td", { class: "num muted-cell" }, ["—"]),
     el("td", { class: "num muted-cell" }, ["—"]),
     moneyCell(-expense.amount, "negative"),
     el("td", { class: "ops" }, [
@@ -360,6 +377,7 @@ function jobForm(job) {
     note: "",
     costPaid: true,
     collected: true,
+    received: "",
   };
   return el("form", { id: "job-form" }, [
     el("div", { class: "block" }, [
@@ -385,16 +403,20 @@ function jobForm(job) {
       el("h3", {}, ["Kime verildi"]),
       el("div", { class: "grid" }, [
         field("customer", "Kime verildi", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
-        field("price", "Satış", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "1.500" })),
-        el("label", { class: "check" }, [
-          el("input", { type: "checkbox", name: "collected", checked: value.collected ? "true" : false }),
-          "Satış parası geldi",
-        ]),
+        field("price", "Satış", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "20.000" })),
+        field("received", "Ne kadar geldi", textInput("received", receivedField(value), { inputmode: "decimal", placeholder: "15.000" })),
+        el("p", { class: "hint wide" }, ["Adam satışın bir kısmını verdiyse buraya o kadar yaz. Boş bırakırsan hepsi geldi sayılır."]),
       ]),
     ]),
     el("div", { class: "preview" }, [
-      el("span", {}, ["Ne kadar kaldı"]),
-      el("strong", { id: "profit-preview" }, [moneyPreview(value.cost, value.price)]),
+      el("div", {}, [
+        el("span", {}, ["Kâr"]),
+        el("strong", { id: "profit-preview" }, [moneyPreview(value.cost, value.price).profit]),
+      ]),
+      el("div", {}, [
+        el("span", {}, ["Alınacak"]),
+        el("strong", { id: "due-preview" }, [moneyPreview(value.cost, value.price, receivedField(value)).due]),
+      ]),
     ]),
     el("div", { class: "actions" }, [
       el("button", { class: "btn primary", type: "submit" }, [job ? "Güncelle" : "Deftere yaz"]),
@@ -403,11 +425,23 @@ function jobForm(job) {
   ]);
 }
 
-function moneyPreview(cost, price) {
+function receivedField(job) {
+  if (!job || job.received === "" || job.received == null) return "";
+  return String(job.received);
+}
+
+function moneyPreview(cost, price, receivedRaw = "") {
   const parsedCost = parseMoney(cost);
   const parsedPrice = parseMoney(price);
-  if (!Number.isFinite(parsedCost) || !Number.isFinite(parsedPrice)) return "—";
-  return formatMoney(parsedPrice - parsedCost);
+  if (!Number.isFinite(parsedCost) || !Number.isFinite(parsedPrice)) return { profit: "—", due: "—" };
+  const typed = String(receivedRaw ?? "").trim();
+  const received = typed ? parseMoney(typed) : parsedPrice;
+  const due = Number.isFinite(received) ? Math.max(0, parsedPrice - received) : NaN;
+  return {
+    profit: formatMoney(parsedPrice - parsedCost),
+    due: Number.isFinite(due) ? formatMoney(due) : "—",
+    dueValue: Number.isFinite(due) ? due : null,
+  };
 }
 
 function expenseSection() {
@@ -459,11 +493,19 @@ function readJob(form) {
   const data = new FormData(form);
   const cost = parseMoney(data.get("cost"));
   const price = parseMoney(data.get("price"));
+  const receivedText = String(data.get("received") || "").trim();
+  const received = receivedText ? parseMoney(receivedText) : price;
   if (!data.get("product") || !data.get("supplier") || !data.get("customer")) {
     return { error: "Yapılan iş, kime verildi ve kimden alındı yazılmalı." };
   }
   if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(price) || price < 0) {
-    return { error: "Ne kadar geldiğini ve ne kadar gittiğini sayı yaz. Örnek: 15.000" };
+    return { error: "Alış ve satış sayı olsun. Örnek: 10.000" };
+  }
+  if (!Number.isFinite(received) || received < 0) {
+    return { error: "Ne kadar geldiğini sayı yaz. Örnek: 15.000" };
+  }
+  if (received > price) {
+    return { error: "Ne kadar geldi, satıştan büyük olamaz." };
   }
   const existing = state.jobs.find((job) => job.id === ui.editingJobId);
   return {
@@ -475,8 +517,9 @@ function readJob(form) {
       customer: String(data.get("customer")),
       cost,
       price,
+      received,
       costPaid: data.get("costPaid") === "on",
-      collected: data.get("collected") === "on",
+      collected: received >= price,
       note: String(data.get("note") || ""),
       createdAt: existing?.createdAt || new Date().toISOString(),
     },
@@ -677,10 +720,16 @@ function onClick(event) {
 function onInput(event) {
   if (event.target.closest("#job-form")) {
     const form = document.querySelector("#job-form");
-    const preview = document.querySelector("#profit-preview");
-    if (!form || !preview) return;
+    if (!form) return;
     const data = new FormData(form);
-    preview.textContent = moneyPreview(data.get("cost"), data.get("price"));
+    const preview = moneyPreview(data.get("cost"), data.get("price"), data.get("received"));
+    const profit = document.querySelector("#profit-preview");
+    const due = document.querySelector("#due-preview");
+    if (profit) profit.textContent = preview.profit;
+    if (due) {
+      due.textContent = preview.due;
+      due.className = preview.dueValue > 0 ? "negative" : "";
+    }
   }
 }
 

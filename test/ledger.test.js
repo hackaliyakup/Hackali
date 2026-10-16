@@ -135,6 +135,34 @@ test("reads 1000 alış and 1500 satış as 500 left", () => {
   assert.equal(summarize(fixed, "all", new Date(2026, 9, 16)).grossProfit, 500);
 });
 
+test("shows 5000 still due when 15000 of a 20000 sale has arrived", () => {
+  const summary = summarize({
+    openingCash: 0,
+    jobs: [{
+      id: "kismi",
+      date: "2026-10-16",
+      product: "Ürün",
+      supplier: "A Firması",
+      customer: "Adam",
+      cost: 10000,
+      price: 20000,
+      received: 15000,
+      costPaid: true,
+      collected: false,
+      note: "",
+      createdAt: "2026-10-16T00:00:00.000Z",
+    }],
+    expenses: [],
+  }, "all", new Date(2026, 9, 16));
+
+  assert.equal(summary.grossProfit, 10000);
+  assert.equal(summary.cashIn, 15000);
+  assert.equal(summary.cashOut, 10000);
+  assert.equal(summary.balance, 5000);
+  assert.equal(summary.receivable, 5000);
+  assert.equal(summary.jobs[0].collected, false);
+});
+
 test("keeps a normal 15000 alış and 25000 satış row as written", () => {
   const fixed = correctPurchaseSale({
     openingCash: 0,

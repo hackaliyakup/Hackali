@@ -109,8 +109,9 @@ function normalizeJob(job) {
     customer,
     cost: roundMoney(cost),
     price: roundMoney(price),
+    received: receivedAmount({ ...job, price: roundMoney(price) }),
     costPaid: Boolean(job.costPaid),
-    collected: Boolean(job.collected),
+    collected: receivedAmount({ ...job, price: roundMoney(price) }) >= roundMoney(price),
     note: cleanText(job.note, 400),
     createdAt: cleanText(job.createdAt, 40) || job.date,
   };
@@ -141,6 +142,22 @@ export function normalize(data) {
   };
 }
 
+export function receivedAmount(job) {
+  const price = roundMoney(Number(job?.price));
+  const cap = Number.isFinite(price) && price > 0 ? price : 0;
+  const raw = job?.received;
+  const explicit = raw == null || raw === "" ? null : roundMoney(Number(raw));
+  const amount = explicit == null || !Number.isFinite(explicit)
+    ? (job?.collected ? cap : 0)
+    : explicit;
+  return roundMoney(Math.min(Math.max(amount, 0), cap));
+}
+
+export function dueAmount(job) {
+  const price = roundMoney(Number(job?.price));
+  return roundMoney((Number.isFinite(price) ? price : 0) - receivedAmount(job));
+}
+
 export function jobProfit(job) {
   return roundMoney(job.price - job.cost);
 }
@@ -159,6 +176,7 @@ export function correctPurchaseSale(state) {
         price: job.cost,
         costPaid: job.collected,
         collected: job.costPaid,
+        received: job.costPaid ? job.cost : 0,
       };
     }),
   };
@@ -171,11 +189,11 @@ export function summarize(state, range = "all", now = new Date()) {
 
   const grossProfit = sumMoney(jobs.map((job) => job.price - job.cost));
   const expenseTotal = sumMoney(expenses.map((expense) => expense.amount));
-  const cashIn = sumMoney(jobs.filter((job) => job.collected).map((job) => job.price));
+  const cashIn = sumMoney(jobs.map((job) => receivedAmount(job)));
   const purchaseOut = sumMoney(jobs.filter((job) => job.costPaid).map((job) => job.cost));
   const cashOut = sumMoney([purchaseOut, expenseTotal]);
 
-  const allCashIn = sumMoney(source.jobs.filter((job) => job.collected).map((job) => job.price));
+  const allCashIn = sumMoney(source.jobs.map((job) => receivedAmount(job)));
   const allPurchaseOut = sumMoney(source.jobs.filter((job) => job.costPaid).map((job) => job.cost));
   const allExpenses = sumMoney(source.expenses.map((expense) => expense.amount));
   const balance = sumMoney([source.openingCash, allCashIn, -allPurchaseOut, -allExpenses]);
@@ -187,9 +205,9 @@ export function summarize(state, range = "all", now = new Date()) {
     cashIn,
     cashOut,
     balance,
-    receivable: sumMoney(source.jobs.filter((job) => !job.collected).map((job) => job.price)),
+    receivable: sumMoney(source.jobs.map((job) => dueAmount(job))),
     payable: sumMoney(source.jobs.filter((job) => !job.costPaid).map((job) => job.cost)),
-    hiddenReceivableCount: source.jobs.filter((job) => !job.collected && !inRange(job.date, range, now)).length,
+    hiddenReceivableCount: source.jobs.filter((job) => dueAmount(job) > 0 && !inRange(job.date, range, now)).length,
     hiddenPayableCount: source.jobs.filter((job) => !job.costPaid && !inRange(job.date, range, now)).length,
     jobs,
     expenses,
@@ -202,15 +220,15 @@ export function cashMovements(state, range = "all", now = new Date()) {
 
   for (const job of source.jobs) {
     if (!inRange(job.date, range, now)) continue;
-    if (job.collected) {
+    if (job.received > 0) {
       items.push({
         id: `${job.id}:in`,
         date: job.date,
         createdAt: job.createdAt,
         kind: "in",
         title: `${job.product} · ${job.customer}`,
-        detail: "Satış tahsilatı",
-        amount: job.price,
+        detail: job.received < job.price ? "Kısmi tahsilat" : "Satış tahsilatı",
+        amount: job.received,
       });
     }
     if (job.costPaid) {

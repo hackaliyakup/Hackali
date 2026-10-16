@@ -321,6 +321,7 @@ label span, .ask, .hint, .meta, .status { color: var(--muted); }
 .block h3 { font-size: 14px; padding-top: 10px; }
 
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid .wide { grid-column: 1 / -1; }
 
 .check {
   display: flex;
