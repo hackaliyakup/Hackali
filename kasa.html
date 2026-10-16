@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hackali Kasa</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Cpath d='M8 12h16M8 16h10M8 20h13' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+:root {
+  --bg: #f3f4f6;
+  --ink: #14171c;
+  --muted: #5e6570;
+  --paper: #ffffff;
+  --line: #e3e5ea;
+  --green: #067647;
+  --red: #b42318;
+  --amber: #b54708;
+  --soft: #f7f8fa;
+  color-scheme: light;
+  font-family: "IBM Plex Sans", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-variant-numeric: tabular-nums;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; background: #fff; }
+
+body { min-height: 100vh; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button { cursor: pointer; }
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0 16px 48px;
+  background: #f4f6f8;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin: 0 -16px 18px;
+  padding: 16px 24px;
+  background: #0b1220;
+  color: white;
+}
+
+.topbar .sub { color: #98a2b3; }
+.topbar .btn { background: transparent; color: white; border-color: rgba(255,255,255,.22); }
+.topbar select { width: auto; background: #1d2939; color: white; border-color: #344054; }
+
+h1, h2, h3, p { margin: 0; }
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.sub { color: var(--muted); margin-top: 4px; font-size: 14px; }
+
+.toolbar, .actions, .row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar { justify-content: flex-end; }
+.toolbar select { width: auto; min-width: 112px; }
+
+select, input, textarea {
+  width: 100%;
+  background: white;
+  border: 1px solid #d5d8de;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+textarea { min-height: 72px; resize: vertical; }
+
+label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; min-width: 0; }
+
+label span, .ask, .hint, .meta, .status { color: var(--muted); }
+
+.board {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) 2fr;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.kasa-card {
+  background: linear-gradient(155deg, #101828 0%, #1d2939 55%, #0f3d2e 140%);
+  color: white;
+  border-radius: 16px;
+  padding: 22px 24px 18px;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, .16);
+}
+
+.kasa-card .eyebrow,
+.kasa-card .hint { color: rgba(255,255,255,.72); }
+
+.kasa-card .balance { color: white; font-size: 52px; font-weight: 600; }
+.kasa-card .balance.negative { color: #fda29b; }
+.kasa-card .text-btn { color: #d0d5dd; }
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.balance {
+  font-size: 48px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  margin: 4px 0 8px;
+}
+
+.balance.negative, .negative, .sum.negative { color: var(--red); }
+.positive, .sum.positive { color: var(--green); }
+.sum.wait, .status.wait { color: var(--amber); }
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+}
+
+.stat {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-top: 3px solid #101828;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, .04);
+}
+
+.stat.in { border-top-color: #067647; }
+.stat.out { border-top-color: #b42318; }
+.stat.profit { border-top-color: #0e9384; }
+.stat.wait { border-top-color: #b54708; }
+
+.stat b {
+  display: block;
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.stat .meta { display: block; margin-top: 2px; }
+
+.tabs {
+  display: inline-flex;
+  margin: 22px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+
+.tab, .btn, .text-btn {
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 9px 14px;
+}
+
+.tab { border-radius: 0; color: var(--muted); }
+.tab + .tab { border-left: 1px solid var(--line); }
+.tab.active { background: var(--ink); color: white; }
+
+.btn {
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.btn.primary {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+  font-weight: 500;
+}
+
+.text-btn { padding-inline: 0; color: var(--muted); }
+.text-btn.danger { color: var(--red); }
+
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px 18px 18px;
+}
+
+.sheet-wrap { margin: 12px -18px 0; overflow-x: auto; }
+
+.sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sheet th,
+.sheet td {
+  border: 1px solid #d0d5dd;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  background: white;
+}
+
+.sheet-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding: 14px 18px 0;
+}
+
+.sheet-bar strong { font-size: 15px; }
+.sheet-bar span { color: var(--muted); font-size: 13px; }
+
+.sheet th {
+  background: #101828;
+  color: white;
+  border-color: #1d2939;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.sheet th.num,
+.sheet td.num { text-align: right; white-space: nowrap; }
+
+.sheet tbody tr:nth-child(even) td { background: #f8f9fb; }
+
+.sheet tbody tr:hover td { background: #f4f7fb; }
+
+.sheet tfoot td {
+  background: #f2f4f7;
+  font-weight: 700;
+  border-top: 2px solid #101828;
+}
+
+.badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.badge.good { background: #e7f6ee; color: #067647; }
+.badge.wait { background: #fff4e5; color: #b54708; }
+.badge.bad { background: #fdecea; color: #b42318; }
+.badge.kind { background: #eef2ff; color: #3538cd; margin-right: 6px; margin-top: 0; }
+
+.cell-title { font-weight: 600; }
+
+.sheet .ops { white-space: nowrap; text-align: right; }
+.sheet .ops .text-btn { margin-left: 10px; }
+.muted-cell { color: var(--muted); }
+.meta.wait { color: var(--amber); }
+
+.entry {
+  padding: 8px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.entry:last-child { border-bottom: 0; }
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding-top: 14px;
+}
+
+.entry h3 { font-size: 16px; font-weight: 600; }
+
+.fact {
+  display: grid;
+  grid-template-columns: 132px 1fr auto;
+  gap: 2px 16px;
+  align-items: baseline;
+  padding: 9px 0;
+}
+
+.who { font-weight: 500; }
+
+.sum { font-weight: 600; text-align: right; white-space: nowrap; }
+
+.sample {
+  background: var(--soft);
+  margin: 12px 0;
+  padding: 4px 14px 12px;
+  border: 0;
+  border-radius: 12px;
+}
+
+.block {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 12px 18px;
+  align-items: start;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.block:first-child { border-top: 0; }
+
+#opening-form { margin-top: 12px; max-width: 280px; display: grid; gap: 8px; }
+
+.block h3 { font-size: 14px; padding-top: 10px; }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid .wide { grid-column: 1 / -1; }
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 500;
+  padding-top: 4px;
+}
+
+.check input { width: 16px; height: 16px; }
+
+.preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding: 14px 0 4px;
+}
+
+.preview strong { font-size: 28px; font-weight: 500; letter-spacing: -0.03em; }
+
+.notice {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.notice.error-notice { background: #fef3f2; color: var(--red); }
+
+.empty { color: var(--muted); padding: 16px 0; }
+
+.footer-actions { padding-top: 8px; }
+
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .board, .facts { grid-template-columns: 1fr; }
+  .kasa-card .balance { font-size: 40px; }
+  .topbar { flex-direction: column; align-items: stretch; }
+  .grid, .block { grid-template-columns: 1fr; }
+  .block h3 { padding-top: 0; }
+}
+
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+const CATEGORIES = [
+  { id: "yemek", label: "Yemek" },
+  { id: "malzeme", label: "Malzeme" },
+  { id: "ulasim", label: "Ulaşım" },
+  { id: "diger", label: "Diğer" },
+];
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function emptyState() {
+  return { openingCash: 0, jobs: [], expenses: [] };
+}
+
+function roundMoney(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return NaN;
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function sumMoney(values) {
+  const cents = values.reduce((total, value) => total + Math.round(value * 100), 0);
+  return cents / 100;
+}
+
+function parseMoney(raw) {
+  if (typeof raw === "number") return roundMoney(raw);
+  let text = String(raw ?? "").trim().replace(/₺/g, "").replace(/\s/g, "");
+  if (!text) return NaN;
+
+  const hasComma = text.includes(",");
+  const hasDot = text.includes(".");
+  if (hasComma && hasDot) {
+    if (text.lastIndexOf(",") > text.lastIndexOf(".")) {
+      text = text.replace(/\./g, "").replace(",", ".");
+    } else {
+      text = text.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    const parts = text.split(",");
+    if (parts.length === 2 && parts[1].length > 0 && parts[1].length <= 2) {
+      text = `${parts[0].replace(/\./g, "")}.${parts[1]}`;
+    } else {
+      text = text.replace(/,/g, "");
+    }
+  } else if (hasDot) {
+    const parts = text.split(".");
+    if (!(parts.length === 2 && parts[1].length > 0 && parts[1].length <= 2)) {
+      text = text.replace(/\./g, "");
+    }
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(text)) return NaN;
+  return roundMoney(text);
+}
+
+function formatMoney(value) {
+  const amount = roundMoney(value);
+  const safe = Number.isFinite(amount) ? amount : 0;
+  const hasCents = Math.round(Math.abs(safe) * 100) % 100 !== 0;
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(safe);
+}
+
+function formatDate(iso) {
+  if (!DATE_RE.test(iso || "")) return iso || "";
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
+function categoryLabel(id) {
+  return CATEGORIES.find((item) => item.id === id)?.label || "Diğer";
+}
+
+function inRange(iso, range, now = new Date()) {
+  if (range === "all") return true;
+  if (!DATE_RE.test(iso || "")) return false;
+  const [year, month] = iso.split("-").map(Number);
+  if (range === "year") return year === now.getFullYear();
+  if (range === "month") return year === now.getFullYear() && month === now.getMonth() + 1;
+  return true;
+}
+
+function cleanText(value, max) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+function normalizeJob(job) {
+  if (!job || typeof job !== "object") return null;
+  const cost = Number(job.cost);
+  const price = Number(job.price);
+  if (!Number.isFinite(cost) || !Number.isFinite(price) || cost < 0 || price < 0) return null;
+  const product = cleanText(job.product, 120);
+  const supplier = cleanText(job.supplier, 120);
+  const customer = cleanText(job.customer, 120);
+  if (!product || !supplier || !customer || !DATE_RE.test(job.date || "")) return null;
+  return {
+    id: cleanText(job.id, 80),
+    date: job.date,
+    product,
+    supplier,
+    customer,
+    cost: roundMoney(cost),
+    price: roundMoney(price),
+    received: receivedAmount({ ...job, price: roundMoney(price) }),
+    costPaid: Boolean(job.costPaid),
+    collected: receivedAmount({ ...job, price: roundMoney(price) }) >= roundMoney(price),
+    note: cleanText(job.note, 400),
+    createdAt: cleanText(job.createdAt, 40) || job.date,
+  };
+}
+
+function normalizeExpense(expense) {
+  if (!expense || typeof expense !== "object") return null;
+  const amount = Number(expense.amount);
+  if (!Number.isFinite(amount) || amount <= 0 || !DATE_RE.test(expense.date || "")) return null;
+  const category = CATEGORIES.some((item) => item.id === expense.category) ? expense.category : "diger";
+  return {
+    id: cleanText(expense.id, 80),
+    date: expense.date,
+    category,
+    person: cleanText(expense.person, 120),
+    amount: roundMoney(amount),
+    note: cleanText(expense.note, 400),
+    createdAt: cleanText(expense.createdAt, 40) || expense.date,
+  };
+}
+
+function normalize(data) {
+  const opening = Number(data?.openingCash);
+  return {
+    openingCash: Number.isFinite(opening) ? roundMoney(opening) : 0,
+    jobs: Array.isArray(data?.jobs) ? data.jobs.map(normalizeJob).filter(Boolean) : [],
+    expenses: Array.isArray(data?.expenses) ? data.expenses.map(normalizeExpense).filter(Boolean) : [],
+  };
+}
+
+function receivedAmount(job) {
+  const price = roundMoney(Number(job?.price));
+  const cap = Number.isFinite(price) && price > 0 ? price : 0;
+  const raw = job?.received;
+  const explicit = raw == null || raw === "" ? null : roundMoney(Number(raw));
+  const amount = explicit == null || !Number.isFinite(explicit)
+    ? (job?.collected ? cap : 0)
+    : explicit;
+  return roundMoney(Math.min(Math.max(amount, 0), cap));
+}
+
+function dueAmount(job) {
+  const price = roundMoney(Number(job?.price));
+  return roundMoney((Number.isFinite(price) ? price : 0) - receivedAmount(job));
+}
+
+function jobProfit(job) {
+  return roundMoney(job.price - job.cost);
+}
+
+function correctPurchaseSale(state) {
+  const source = normalize(state);
+  return {
+    ...source,
+    jobs: source.jobs.map((job) => {
+      if (job.cost <= job.price) return job;
+      return {
+        ...job,
+        supplier: job.customer,
+        customer: job.supplier,
+        cost: job.price,
+        price: job.cost,
+        costPaid: job.collected,
+        collected: job.costPaid,
+        received: job.costPaid ? job.cost : 0,
+      };
+    }),
+  };
+}
+
+function summarize(state, range = "all", now = new Date()) {
+  const source = normalize(state);
+  const jobs = source.jobs.filter((job) => inRange(job.date, range, now));
+  const expenses = source.expenses.filter((expense) => inRange(expense.date, range, now));
+
+  const grossProfit = sumMoney(jobs.map((job) => job.price - job.cost));
+  const expenseTotal = sumMoney(expenses.map((expense) => expense.amount));
+  const cashIn = sumMoney(jobs.map((job) => receivedAmount(job)));
+  const purchaseOut = sumMoney(jobs.filter((job) => job.costPaid).map((job) => job.cost));
+  const cashOut = sumMoney([purchaseOut, expenseTotal]);
+
+  const allCashIn = sumMoney(source.jobs.map((job) => receivedAmount(job)));
+  const allPurchaseOut = sumMoney(source.jobs.filter((job) => job.costPaid).map((job) => job.cost));
+  const allExpenses = sumMoney(source.expenses.map((expense) => expense.amount));
+  const balance = sumMoney([source.openingCash, allCashIn, -allPurchaseOut, -allExpenses]);
+
+  return {
+    grossProfit,
+    expenseTotal,
+    netProfit: sumMoney([grossProfit, -expenseTotal]),
+    cashIn,
+    cashOut,
+    balance,
+    receivable: sumMoney(source.jobs.map((job) => dueAmount(job))),
+    payable: sumMoney(source.jobs.filter((job) => !job.costPaid).map((job) => job.cost)),
+    hiddenReceivableCount: source.jobs.filter((job) => dueAmount(job) > 0 && !inRange(job.date, range, now)).length,
+    hiddenPayableCount: source.jobs.filter((job) => !job.costPaid && !inRange(job.date, range, now)).length,
+    jobs,
+    expenses,
+  };
+}
+
+function cashMovements(state, range = "all", now = new Date()) {
+  const source = normalize(state);
+  const items = [];
+
+  for (const job of source.jobs) {
+    if (!inRange(job.date, range, now)) continue;
+    if (job.received > 0) {
+      items.push({
+        id: `${job.id}:in`,
+        date: job.date,
+        createdAt: job.createdAt,
+        kind: "in",
+        title: `${job.product} · ${job.customer}`,
+        detail: job.received < job.price ? "Kısmi tahsilat" : "Satış tahsilatı",
+        amount: job.received,
+      });
+    }
+    if (job.costPaid) {
+      items.push({
+        id: `${job.id}:out`,
+        date: job.date,
+        createdAt: job.createdAt,
+        kind: "out",
+        title: `${job.product} · ${job.supplier}`,
+        detail: "Alış ödemesi",
+        amount: job.cost,
+      });
+    }
+  }
+
+  for (const expense of source.expenses) {
+    if (!inRange(expense.date, range, now)) continue;
+    const who = expense.person ? ` · ${expense.person}` : "";
+    items.push({
+      id: expense.id,
+      date: expense.date,
+      createdAt: expense.createdAt,
+      kind: "expense",
+      title: `${categoryLabel(expense.category)}${who}`,
+      detail: expense.note || "Gider",
+      amount: expense.amount,
+    });
+  }
+
+  items.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  return items;
+}
+
+function exampleJob(date) {
+  return {
+    id: "ornek-is",
+    date,
+    product: "Ürün",
+    supplier: "A Firması",
+    customer: "B",
+    cost: 15000,
+    price: 25000,
+    costPaid: true,
+    collected: true,
+    note: "",
+    createdAt: `${date}T00:00:00.000Z`,
+  };
+}
+
+const STORAGE_KEY = "hackali-kasa-v1";
+
+const ui = {
+  tab: "ozet",
+  range: "month",
+  editingJobId: null,
+  editingExpenseId: null,
+  editingOpening: false,
+  message: "",
+  error: "",
+};
+
+const SWAP_FLAG = "hackali-kasa-alis-satis-v1";
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    localStorage.setItem(SWAP_FLAG, "1");
+    return emptyState();
+  }
+  let data;
+  try {
+    data = normalize(JSON.parse(raw));
+  } catch {
+    localStorage.setItem(`${STORAGE_KEY}-bozuk`, raw);
+    ui.message = "Kayıtlı defter okunamadı. Bozuk kayıt yedeklendi ve yeni bir defter açıldı.";
+    return emptyState();
+  }
+  if (localStorage.getItem(SWAP_FLAG)) return data;
+  const fixed = correctPurchaseSale(data);
+  localStorage.setItem(SWAP_FLAG, "1");
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(fixed));
+  return fixed;
+}
+
+let state = loadState();
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function showError(message) {
+  ui.error = message;
+  const main = document.querySelector("main");
+  if (!main) return;
+  let box = main.querySelector(".error-notice");
+  if (!box) {
+    box = el("div", { class: "notice error-notice" }, [message]);
+    main.prepend(box);
+    return;
+  }
+  box.textContent = message;
+}
+
+function todayISO() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value == null || value === false) continue;
+    if (key === "class") node.className = value;
+    else node.setAttribute(key, String(value));
+  }
+  for (const child of children.flat()) {
+    if (child == null || child === false) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function field(name, label, control, className) {
+  return el("label", { class: className }, [el("span", {}, [label]), control]);
+}
+
+function textInput(name, value, extra = {}) {
+  return el("input", { name, value: value ?? "", ...extra });
+}
+
+function currentSummary() {
+  return summarize(state, ui.range, new Date());
+}
+
+function render() {
+  const root = document.querySelector("#app");
+  const summary = currentSummary();
+  const parts = [header(), tabs()];
+  if (ui.tab === "ozet") parts.push(board(summary));
+  parts.push(panel(summary));
+  root.replaceChildren(...parts);
+}
+
+function header() {
+  return el("header", { class: "topbar" }, [
+    el("div", {}, [
+      el("h1", {}, ["Hackali Kasa"]),
+      el("p", { class: "sub" }, ["Yapılan iş, kimden alındı, kime verildi, ne kadar kaldı."]),
+    ]),
+    el("div", { class: "toolbar" }, [
+      el("select", { "data-action": "range", "aria-label": "Dönem" }, [
+        option("month", "Bu ay", ui.range),
+        option("year", "Bu yıl", ui.range),
+        option("all", "Tümü", ui.range),
+      ]),
+      el("button", { class: "btn", type: "button", "data-action": "export" }, ["Yedek al"]),
+      el("button", { class: "btn", type: "button", "data-action": "import" }, ["Yedek yükle"]),
+    ]),
+  ]);
+}
+
+function option(value, label, current) {
+  return el("option", { value, selected: value === current }, [label]);
+}
+
+function board(summary) {
+  const opening = state.openingCash
+    ? `Kasa ${formatMoney(state.openingCash)} ile açıldı. `
+    : "";
+  const sales = summary.jobs.reduce((total, job) => total + Math.round(job.price * 100), 0) / 100;
+  const margin = sales ? Math.round((summary.grossProfit / sales) * 100) : 0;
+  const collected = summary.jobs.filter((job) => receivedAmount(job) > 0).length;
+  const cards = [
+    ["Gelen", formatMoney(summary.cashIn), "Kasaya giren", `${collected} tahsilat işlendi`, "in", "positive"],
+    ["Giden", formatMoney(summary.cashOut), "Alış ve gider", `Gider ${formatMoney(summary.expenseTotal)}`, "out", "negative"],
+    ["Kâr", formatMoney(summary.netProfit), "Ne kadar kaldı", sales ? `Satışın %${margin}'ı kâr` : "Bu dönemde satış yok", "profit", summary.netProfit < 0 ? "negative" : "positive"],
+    ["Bekleyen", formatMoney(summary.receivable + summary.payable), "Henüz kapanmadı", `Alınacak ${formatMoney(summary.receivable)} · Ödenecek ${formatMoney(summary.payable)}`, "wait", ""],
+  ];
+  return el("section", { class: "board" }, [
+    el("article", { class: "kasa-card" }, [
+      el("div", { class: "eyebrow" }, ["Kasada"]),
+      el("div", { class: summary.balance < 0 ? "balance negative" : "balance" }, [formatMoney(summary.balance)]),
+      el("p", { class: "hint" }, [opening, "Gelen paradan giden para çıkınca kasada bu kalır."]),
+      ui.editingOpening
+        ? openingForm()
+        : el("button", { class: "text-btn", type: "button", "data-action": "edit-opening" }, [
+            `Başlangıç parası: ${formatMoney(state.openingCash)}`,
+          ]),
+    ]),
+    el("div", { class: "facts" }, cards.map(([label, value, hint, detail, kind, tone]) =>
+      el("article", { class: `stat ${kind}` }, [
+        el("span", { class: "ask" }, [label]),
+        el("b", { class: tone }, [value]),
+        el("span", { class: "meta" }, [hint]),
+        el("span", { class: "meta" }, [detail]),
+      ]),
+    )),
+  ]);
+}
+
+function openingForm() {
+  return el("form", { id: "opening-form" }, [
+    field("openingCash", "Kasanın başlangıç parası", textInput("openingCash", String(state.openingCash), { inputmode: "decimal", required: "true" })),
+    el("div", { class: "actions" }, [
+      el("button", { class: "btn primary", type: "submit" }, ["Kaydet"]),
+      el("button", { class: "btn", type: "button", "data-action": "cancel-opening" }, ["Vazgeç"]),
+    ]),
+  ]);
+}
+
+function tabs() {
+  const items = [
+    ["ozet", "Defter"],
+    ["isler", "Yeni iş"],
+    ["giderler", "Gider"],
+  ];
+  return el("nav", { class: "tabs", "aria-label": "Bölümler" }, items.map(([id, label]) =>
+    el("button", {
+      class: ui.tab === id ? "tab active" : "tab",
+      type: "button",
+      "data-action": "tab",
+      "data-tab": id,
+    }, [label]),
+  ));
+}
+
+function panel(summary) {
+  const body = [alerts(summary)];
+  if (ui.tab === "ozet") body.push(overview(summary));
+  if (ui.tab === "isler") body.push(jobSection(summary));
+  if (ui.tab === "giderler") body.push(expenseSection(summary));
+  return el("main", { class: "panel" }, body);
+}
+
+function alerts(summary) {
+  const nodes = [];
+  if (ui.message) nodes.push(el("div", { class: "notice" }, [ui.message]));
+  if (ui.error) nodes.push(el("div", { class: "notice error-notice" }, [ui.error]));
+  if (summary.hiddenReceivableCount || summary.hiddenPayableCount) {
+    nodes.push(el("div", { class: "notice" }, [
+      "Başka ayda henüz gelmemiş veya gitmemiş para var. Hepsini görmek için dönemi Tümü yap.",
+    ]));
+  }
+  return nodes;
+}
+
+function stories(summary) {
+  return [
+    ...summary.jobs.map((job) => ({ kind: "job", date: job.date, createdAt: job.createdAt, job })),
+    ...summary.expenses.map((expense) => ({ kind: "expense", date: expense.date, createdAt: expense.createdAt, expense })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+function overview(summary) {
+  const items = stories(summary);
+  return el("section", {}, [
+    items.length
+      ? ledgerTable(items)
+      : sampleStory(),
+    dangerZone(),
+  ]);
+}
+
+function sampleStory() {
+  const sample = exampleJob(todayISO());
+  return el("div", {}, [
+    el("p", { class: "hint" }, ["Boş defter. Örnek satır şöyle durur:"]),
+    ledgerTable([{ kind: "job", date: sample.date, createdAt: sample.createdAt, job: sample }], { sample: true }),
+    el("button", { class: "btn primary", type: "button", "data-action": "example" }, ["Bu örneği deftere yaz"]),
+  ]);
+}
+
+function ledgerTable(items, options = {}) {
+  const alis = sumColumn(items, "alis");
+  const satis = sumColumn(items, "satis");
+  const geldi = sumColumn(items, "geldi");
+  const alinacak = sumColumn(items, "alinacak");
+  const kaldi = sumColumn(items, "left");
+  const jobs = items.filter((item) => item.kind === "job").length;
+  const expenses = items.length - jobs;
+  const headers = ["#", "Tarih", "Yapılan iş", "Kimden alındı", "Alış", "Kime verildi", "Satış", "Ne kadar geldi", "Alınacak", "Ne kadar kaldı", ""];
+  const numeric = new Set([4, 6, 7, 8, 9]);
+  return el("div", {}, [
+    el("div", { class: "sheet-bar" }, [
+      el("strong", {}, ["Defter"]),
+      el("span", {}, [`${items.length} satır · ${jobs} iş · ${expenses} gider`]),
+    ]),
+    el("div", { class: "sheet-wrap" }, [
+      el("table", { class: "sheet" }, [
+        el("thead", {}, [
+          el("tr", {}, headers.map((label, index) =>
+            el("th", { class: numeric.has(index) ? "num" : "" }, [label]),
+          )),
+        ]),
+        el("tbody", {}, items.map((item, index) => (
+          item.kind === "job" ? jobRow(item.job, options.sample, index + 1) : expenseRow(item.expense, index + 1)
+        ))),
+        options.sample ? null : el("tfoot", {}, [
+          el("tr", {}, [
+            el("td", { colspan: "4" }, ["Toplam"]),
+            el("td", { class: "num" }, [formatMoney(alis)]),
+            el("td", {}, []),
+            el("td", { class: "num" }, [formatMoney(satis)]),
+            el("td", { class: "num" }, [formatMoney(geldi)]),
+            el("td", { class: alinacak > 0 ? "num negative" : "num" }, [formatMoney(alinacak)]),
+            el("td", { class: kaldi < 0 ? "num negative" : "num positive" }, [formatMoney(kaldi)]),
+            el("td", {}, []),
+          ]),
+        ]),
+      ]),
+    ]),
+  ]);
+}
+
+function sumColumn(items, key) {
+  const cents = items.reduce((total, item) => total + Math.round(figures(item)[key] * 100), 0);
+  return cents / 100;
+}
+
+function figures(item) {
+  if (item.kind === "job") {
+    return {
+      alis: item.job.cost,
+      satis: item.job.price,
+      geldi: receivedAmount(item.job),
+      alinacak: dueAmount(item.job),
+      left: jobProfit(item.job),
+    };
+  }
+  return { alis: 0, satis: 0, geldi: 0, alinacak: 0, left: -item.expense.amount };
+}
+
+function rate(part, whole) {
+  if (!whole) return "";
+  return `%${Math.round((part / whole) * 100)}`;
+}
+
+function badge(text, kind) {
+  return el("span", { class: `badge ${kind}` }, [text]);
+}
+
+function jobRow(job, sample, index) {
+  const profit = jobProfit(job);
+  return el("tr", {}, [
+    el("td", { class: "muted-cell" }, [String(index)]),
+    el("td", {}, [formatDate(job.date)]),
+    el("td", {}, [
+      el("div", {}, [badge("İş", "kind"), el("span", { class: "cell-title" }, [job.product])]),
+      job.note ? el("div", { class: "meta" }, [job.note]) : null,
+    ]),
+    el("td", {}, [el("div", { class: "cell-title" }, [job.supplier])]),
+    moneyCell(job.cost, "negative"),
+    el("td", {}, [el("div", { class: "cell-title" }, [job.customer])]),
+    moneyCell(job.price, "positive"),
+    moneyCell(receivedAmount(job), "positive"),
+    moneyCell(dueAmount(job), dueAmount(job) > 0 ? "negative" : ""),
+    moneyCell(profit, profit < 0 ? "negative" : "positive", rate(profit, job.price)),
+    sample ? el("td", {}, []) : el("td", { class: "ops" }, [
+      el("button", { class: "text-btn", type: "button", "data-action": "edit-job", "data-id": job.id }, ["Düzenle"]),
+      el("button", { class: "text-btn danger", type: "button", "data-action": "delete-job", "data-id": job.id }, ["Sil"]),
+    ]),
+  ]);
+}
+
+function expenseRow(expense, index) {
+  const what = [expense.person, expense.note].filter(Boolean).join(" · ");
+  return el("tr", {}, [
+    el("td", { class: "muted-cell" }, [String(index)]),
+    el("td", {}, [formatDate(expense.date)]),
+    el("td", {}, [
+      el("div", {}, [badge("Gider", "kind"), el("span", { class: "cell-title" }, [categoryLabel(expense.category)])]),
+      what ? el("div", { class: "meta" }, [what]) : null,
+    ]),
+    el("td", { class: "muted-cell" }, ["—"]),
+    el("td", { class: "num muted-cell" }, ["—"]),
+    el("td", {}, [el("div", { class: "cell-title" }, [categoryLabel(expense.category)])]),
+    el("td", { class: "num muted-cell" }, ["—"]),
+    el("td", { class: "num muted-cell" }, ["—"]),
+    el("td", { class: "num muted-cell" }, ["—"]),
+    moneyCell(-expense.amount, "negative"),
+    el("td", { class: "ops" }, [
+      el("button", { class: "text-btn", type: "button", "data-action": "edit-expense", "data-id": expense.id }, ["Düzenle"]),
+      el("button", { class: "text-btn danger", type: "button", "data-action": "delete-expense", "data-id": expense.id }, ["Sil"]),
+    ]),
+  ]);
+}
+
+function moneyCell(amount, tone, extra) {
+  return el("td", { class: "num" }, [
+    el("div", { class: tone || "" }, [formatMoney(amount)]),
+    extra ? el("div", { class: "meta" }, [extra]) : null,
+  ]);
+}
+
+function jobSection() {
+  const editing = state.jobs.find((job) => job.id === ui.editingJobId);
+  return el("section", {}, [jobForm(editing)]);
+}
+
+function jobForm(job) {
+  const value = job || {
+    date: todayISO(),
+    product: "",
+    supplier: "",
+    cost: "",
+    customer: "",
+    price: "",
+    note: "",
+    costPaid: true,
+    collected: true,
+    received: "",
+  };
+  return el("form", { id: "job-form" }, [
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Yapılan iş"]),
+      el("div", { class: "grid" }, [
+        field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
+        field("product", "Yapılan iş", textInput("product", value.product, { required: "true", maxlength: "120", placeholder: "Klima takıldı" })),
+        field("note", "Kısa not", textInput("note", value.note || "", { maxlength: "400", placeholder: "İstersen boş bırak" }), "wide"),
+      ]),
+    ]),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Kimden alındı"]),
+      el("div", { class: "grid" }, [
+        field("supplier", "Kimden alındı", textInput("supplier", value.supplier, { required: "true", maxlength: "120", placeholder: "A Firması" })),
+        field("cost", "Alış", textInput("cost", value.cost === "" ? "" : String(value.cost), { inputmode: "decimal", required: "true", placeholder: "1.000" })),
+        el("label", { class: "check" }, [
+          el("input", { type: "checkbox", name: "costPaid", checked: value.costPaid ? "true" : false }),
+          "Alış parasını ödedim",
+        ]),
+      ]),
+    ]),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Kime verildi"]),
+      el("div", { class: "grid" }, [
+        field("customer", "Kime verildi", textInput("customer", value.customer, { required: "true", maxlength: "120", placeholder: "B" })),
+        field("price", "Satış", textInput("price", value.price === "" ? "" : String(value.price), { inputmode: "decimal", required: "true", placeholder: "20.000" })),
+        field("received", "Ne kadar geldi", textInput("received", receivedField(value), { inputmode: "decimal", placeholder: "15.000" })),
+        el("p", { class: "hint wide" }, ["Adam satışın bir kısmını verdiyse buraya o kadar yaz. Boş bırakırsan hepsi geldi sayılır."]),
+      ]),
+    ]),
+    el("div", { class: "preview" }, [
+      el("div", {}, [
+        el("span", {}, ["Kâr"]),
+        el("strong", { id: "profit-preview" }, [moneyPreview(value.cost, value.price).profit]),
+      ]),
+      el("div", {}, [
+        el("span", {}, ["Alınacak"]),
+        el("strong", { id: "due-preview" }, [moneyPreview(value.cost, value.price, receivedField(value)).due]),
+      ]),
+    ]),
+    el("div", { class: "actions" }, [
+      el("button", { class: "btn primary", type: "submit" }, [job ? "Güncelle" : "Deftere yaz"]),
+      job ? el("button", { class: "btn", type: "button", "data-action": "cancel-job" }, ["Vazgeç"]) : null,
+    ]),
+  ]);
+}
+
+function receivedField(job) {
+  if (!job || job.received === "" || job.received == null) return "";
+  return String(job.received);
+}
+
+function moneyPreview(cost, price, receivedRaw = "") {
+  const parsedCost = parseMoney(cost);
+  const parsedPrice = parseMoney(price);
+  if (!Number.isFinite(parsedCost) || !Number.isFinite(parsedPrice)) return { profit: "—", due: "—" };
+  const typed = String(receivedRaw ?? "").trim();
+  const received = typed ? parseMoney(typed) : parsedPrice;
+  const due = Number.isFinite(received) ? Math.max(0, parsedPrice - received) : NaN;
+  return {
+    profit: formatMoney(parsedPrice - parsedCost),
+    due: Number.isFinite(due) ? formatMoney(due) : "—",
+    dueValue: Number.isFinite(due) ? due : null,
+  };
+}
+
+function expenseSection() {
+  const editing = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
+  return el("section", {}, [expenseForm(editing)]);
+}
+
+function expenseForm(expense) {
+  const value = expense || { date: todayISO(), category: "yemek", person: "", amount: "", note: "" };
+  return el("form", { id: "expense-form" }, [
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Yapılan iş"]),
+      el("div", { class: "grid" }, [
+        field("date", "Tarih", textInput("date", value.date, { type: "date", required: "true" })),
+        field("category", "Tür", el("select", { name: "category" }, CATEGORIES.map((item) =>
+          option(item.id, item.label, value.category),
+        ))),
+        field("person", "Kim", textInput("person", value.person, { maxlength: "120", placeholder: "Ali" })),
+        field("note", "Kısa not", textInput("note", value.note || "", { maxlength: "400", placeholder: "Öğle yemeği" })),
+      ]),
+    ]),
+    el("div", { class: "block" }, [
+      el("h3", {}, ["Kime verildi"]),
+      field("amount", "Ne kadar gitti", textInput("amount", value.amount === "" ? "" : String(value.amount), { inputmode: "decimal", required: "true", placeholder: "350" })),
+    ]),
+    el("div", { class: "actions" }, [
+      el("button", { class: "btn primary", type: "submit" }, [expense ? "Güncelle" : "Deftere yaz"]),
+      expense ? el("button", { class: "btn", type: "button", "data-action": "cancel-expense" }, ["Vazgeç"]) : null,
+    ]),
+  ]);
+}
+
+function dangerZone() {
+  if (!state.jobs.length && !state.expenses.length) return null;
+  return el("div", { class: "footer-actions" }, [
+    el("button", { class: "text-btn danger", type: "button", "data-action": "reset" }, ["Tüm kayıtları sil"]),
+  ]);
+}
+
+function upsert(list, item) {
+  const index = list.findIndex((entry) => entry.id === item.id);
+  if (index === -1) return [item, ...list];
+  const next = list.slice();
+  next[index] = item;
+  return next;
+}
+
+function readJob(form) {
+  const data = new FormData(form);
+  const cost = parseMoney(data.get("cost"));
+  const price = parseMoney(data.get("price"));
+  const receivedText = String(data.get("received") || "").trim();
+  const received = receivedText ? parseMoney(receivedText) : price;
+  if (!data.get("product") || !data.get("supplier") || !data.get("customer")) {
+    return { error: "Yapılan iş, kime verildi ve kimden alındı yazılmalı." };
+  }
+  if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(price) || price < 0) {
+    return { error: "Alış ve satış sayı olsun. Örnek: 10.000" };
+  }
+  if (!Number.isFinite(received) || received < 0) {
+    return { error: "Ne kadar geldiğini sayı yaz. Örnek: 15.000" };
+  }
+  if (received > price) {
+    return { error: "Ne kadar geldi, satıştan büyük olamaz." };
+  }
+  const existing = state.jobs.find((job) => job.id === ui.editingJobId);
+  return {
+    job: {
+      id: existing?.id || crypto.randomUUID(),
+      date: String(data.get("date")),
+      product: String(data.get("product")),
+      supplier: String(data.get("supplier")),
+      customer: String(data.get("customer")),
+      cost,
+      price,
+      received,
+      costPaid: data.get("costPaid") === "on",
+      collected: received >= price,
+      note: String(data.get("note") || ""),
+      createdAt: existing?.createdAt || new Date().toISOString(),
+    },
+  };
+}
+
+function readExpense(form) {
+  const data = new FormData(form);
+  const amount = parseMoney(data.get("amount"));
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Ne kadar gittiğini yaz. Örnek: 350" };
+  const existing = state.expenses.find((expense) => expense.id === ui.editingExpenseId);
+  return {
+    expense: {
+      id: existing?.id || crypto.randomUUID(),
+      date: String(data.get("date")),
+      category: String(data.get("category")),
+      person: String(data.get("person") || ""),
+      amount,
+      note: String(data.get("note") || ""),
+      createdAt: existing?.createdAt || new Date().toISOString(),
+    },
+  };
+}
+
+function updateJob(id, change) {
+  state = {
+    ...state,
+    jobs: state.jobs.map((job) => (job.id === id ? { ...job, ...change } : job)),
+  };
+  saveState();
+  render();
+}
+
+function exportLedger() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `hackali-kasa-${todayISO()}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function importLedger() {
+  const input = el("input", { type: "file", accept: "application/json,.json" });
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const next = normalize(JSON.parse(await file.text()));
+      state = next;
+      saveState();
+      ui.message = "Defter içeri aktarıldı.";
+      ui.error = "";
+      render();
+    } catch {
+      ui.error = "Bu dosya bir yedek değil.";
+      ui.tab = "ozet";
+      render();
+    }
+  });
+  input.click();
+}
+
+function onSubmit(event) {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  if (form.id === "opening-form") {
+    event.preventDefault();
+    const opening = parseMoney(new FormData(form).get("openingCash"));
+    if (!Number.isFinite(opening)) {
+      showError("Açılış kasasını sayı olarak yaz.");
+      return;
+    }
+    state = { ...state, openingCash: opening };
+    ui.editingOpening = false;
+    ui.error = "";
+    saveState();
+    render();
+  }
+  if (form.id === "job-form") {
+    event.preventDefault();
+    const result = readJob(form);
+    if (result.error) {
+      showError(result.error);
+      return;
+    }
+    const saved = normalize({ jobs: [result.job] }).jobs[0];
+    if (!saved) {
+      showError("İş kaydedilemedi. Tarihi ve tutarları kontrol et.");
+      return;
+    }
+    if (!inRange(saved.date, ui.range, new Date())) ui.range = "all";
+    state = { ...state, jobs: upsert(state.jobs, saved) };
+    ui.editingJobId = null;
+    ui.tab = "ozet";
+    ui.error = "";
+    ui.message = "";
+    saveState();
+    render();
+  }
+  if (form.id === "expense-form") {
+    event.preventDefault();
+    const result = readExpense(form);
+    if (result.error) {
+      showError(result.error);
+      return;
+    }
+    const saved = normalize({ expenses: [result.expense] }).expenses[0];
+    if (!saved) {
+      showError("Gider kaydedilemedi.");
+      return;
+    }
+    if (!inRange(saved.date, ui.range, new Date())) ui.range = "all";
+    state = { ...state, expenses: upsert(state.expenses, saved) };
+    ui.editingExpenseId = null;
+    ui.tab = "ozet";
+    ui.error = "";
+    saveState();
+    render();
+  }
+}
+
+function onClick(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const action = button.dataset.action;
+  const id = button.dataset.id;
+
+  if (action === "tab") {
+    ui.tab = button.dataset.tab;
+    ui.error = "";
+    render();
+  }
+  if (action === "edit-opening") {
+    ui.editingOpening = true;
+    render();
+  }
+  if (action === "cancel-opening") {
+    ui.editingOpening = false;
+    render();
+  }
+  if (action === "example") {
+    state = { ...state, jobs: upsert(state.jobs, exampleJob(todayISO())) };
+    ui.message = "Yazıldı. B'den 25.000 ₺ geldi. A Firmasına 15.000 ₺ gitti. 10.000 ₺ kaldı.";
+    saveState();
+    render();
+  }
+  if (action === "export") exportLedger();
+  if (action === "import") importLedger();
+  if (action === "edit-job") {
+    ui.editingJobId = id;
+    ui.tab = "isler";
+    ui.error = "";
+    render();
+  }
+  if (action === "cancel-job") {
+    ui.editingJobId = null;
+    ui.tab = "ozet";
+    render();
+  }
+  if (action === "delete-job" && confirm("Bu iş silinsin mi?")) {
+    state = { ...state, jobs: state.jobs.filter((job) => job.id !== id) };
+    saveState();
+    render();
+  }
+  if (action === "toggle-collected") {
+    const job = state.jobs.find((item) => item.id === id);
+    updateJob(id, { collected: !job.collected });
+  }
+  if (action === "toggle-paid") {
+    const job = state.jobs.find((item) => item.id === id);
+    updateJob(id, { costPaid: !job.costPaid });
+  }
+  if (action === "edit-expense") {
+    ui.editingExpenseId = id;
+    ui.tab = "giderler";
+    ui.error = "";
+    render();
+  }
+  if (action === "cancel-expense") {
+    ui.editingExpenseId = null;
+    ui.tab = "ozet";
+    render();
+  }
+  if (action === "delete-expense" && confirm("Bu gider silinsin mi?")) {
+    state = { ...state, expenses: state.expenses.filter((expense) => expense.id !== id) };
+    saveState();
+    render();
+  }
+  if (action === "reset" && confirm("Bütün işler, giderler ve kasa bakiyesi silinsin mi?")) {
+    state = emptyState();
+    ui.message = "";
+    saveState();
+    render();
+  }
+}
+
+function onInput(event) {
+  if (event.target.closest("#job-form")) {
+    const form = document.querySelector("#job-form");
+    if (!form) return;
+    const data = new FormData(form);
+    const preview = moneyPreview(data.get("cost"), data.get("price"), data.get("received"));
+    const profit = document.querySelector("#profit-preview");
+    const due = document.querySelector("#due-preview");
+    if (profit) profit.textContent = preview.profit;
+    if (due) {
+      due.textContent = preview.due;
+      due.className = preview.dueValue > 0 ? "negative" : "";
+    }
+  }
+}
+
+function onChange(event) {
+  if (event.target.matches("[data-action='range']")) {
+    ui.range = event.target.value;
+    ui.error = "";
+    render();
+  }
+}
+
+document.addEventListener("submit", onSubmit);
+document.addEventListener("click", onClick);
+document.addEventListener("input", onInput);
+document.addEventListener("change", onChange);
+render();
+
+    </script>
+  </body>
+</html>
